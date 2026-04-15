@@ -188,12 +188,41 @@
     .btn-primary { display: none !important; }
   }
 
-  @media (max-width: 600px), (orientation: portrait) and (max-width: 900px) {
+  @media (max-width: 600px) {
     .header-actions .btn span { display: none; }
     .main { padding: .75rem; }
     th, td { padding: 7px 8px; font-size: 12px; }
     .report-cols { grid-template-columns: 1fr; }
   }
+
+  /* ── 모바일 카드 ── */
+  .m-cards { display: none; }
+  .m-group { margin-bottom: 10px; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .m-group-hd { background: var(--surface2); padding: 8px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+  .m-group-title { font-weight: 700; font-size: 13px; color: var(--text-primary); }
+  .m-group-date { font-size: 11px; color: var(--text-secondary); }
+  .m-card { background: var(--surface); padding: 10px 12px; border-bottom: 0.5px solid var(--border); }
+  .m-card:last-child { border-bottom: none; }
+  .m-card.row-long { background: var(--long); }
+  .m-card.row-new { background: var(--new); }
+  .m-card.row-done { opacity: 0.5; background: var(--surface2); }
+  .m-card-title { font-weight: 700; font-size: 13px; color: var(--text-primary); margin-bottom: 5px; }
+  .m-card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  .m-card-note { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+  .m-card-actions { display: flex; gap: 6px; padding-top: 6px; border-top: 0.5px solid var(--border); }
+
+  /* ── 세로 모드 (portrait) ── */
+  body.portrait .header-actions .btn span { display: none; }
+  body.portrait .main { padding: 8px; }
+  body.portrait .metrics { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  body.portrait .metric-card { padding: 12px; }
+  body.portrait .metric-value { font-size: 20px; }
+  body.portrait .tab-btn { padding: 7px 8px; font-size: 11px; }
+  body.portrait .section-header { flex-wrap: wrap; gap: 6px; }
+  body.portrait .report-cols { grid-template-columns: 1fr; }
+  body.portrait .report-header { flex-direction: column; align-items: flex-start; }
+  body.portrait .table-wrap table { display: none !important; }
+  body.portrait .m-cards { display: flex !important; flex-direction: column; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -707,6 +736,7 @@
     });
 
     tbody.innerHTML = html || `<tr><td colspan="9" style="color:var(--text-muted);text-align:center;padding:20px;">등록된 업무가 없습니다</td></tr>`;
+    renderMobileCards(groups, showingDone, tbody.closest('.table-wrap'));
   }
 
   // ── 전체 렌더 ──
@@ -820,6 +850,7 @@
       });
     });
     tbody.innerHTML = html || `<tr><td colspan="7" style="color:var(--text-muted);text-align:center;padding:20px;">등록된 업무가 없습니다</td></tr>`;
+    renderMobileCards(groups, showing, tbody.closest('.table-wrap'));
   }
 
   // ── 주간 리포트 (Executive Summary) ──
@@ -1234,6 +1265,66 @@
     { id:'T013', mainTitle:'신규 기능 QA',   subTitle:'테스트 시나리오 작성', member:'박지호', status:'예정',    start:'2026-04-20', end:'2026-04-21', note:'',                  createdAt:'2026-04-13' },
     { id:'T014', mainTitle:'신규 기능 QA',   subTitle:'QA 테스트 실행',       member:'박지호', status:'예정',    start:'2026-04-22', end:'2026-04-26', note:'',                  createdAt:'2026-04-13' },
   ];
+
+  // ── 세로/가로 감지 ──
+  function checkOrientation() {
+    const isPortrait = window.innerHeight > window.innerWidth;
+    document.body.classList.toggle('portrait', isPortrait);
+  }
+  checkOrientation();
+  window.addEventListener('resize', checkOrientation);
+  window.addEventListener('orientationchange', function() {
+    setTimeout(checkOrientation, 100);
+  });
+
+  // ── 세로/가로 감지 ──
+  function checkOrientation() {
+    const isPortrait = window.innerHeight > window.innerWidth;
+    document.body.classList.toggle('portrait', isPortrait);
+  }
+  checkOrientation();
+  window.addEventListener('resize', checkOrientation);
+  window.addEventListener('orientationchange', function() { setTimeout(checkOrientation, 100); });
+
+  // ── 모바일 카드 렌더 ──
+  function renderMobileCards(groups, showingDone, tableWrap) {
+    if (!tableWrap) return;
+    const old = tableWrap.querySelector('.m-cards');
+    if (old) old.remove();
+    const wrap = document.createElement('div');
+    wrap.className = 'm-cards';
+    groups.forEach((subs, mainTitle) => {
+      const info = calcMain(subs);
+      if (!showingDone && info.allDone) return;
+      const hasActive = subs.some(s => s.status !== '완료');
+      const toShow = showingDone ? subs : (hasActive ? subs : []);
+      if (!toShow.length) return;
+      const group = document.createElement('div');
+      group.className = 'm-group';
+      group.innerHTML = `<div class="m-group-hd"><span class="m-group-title">${mainTitle}</span><span class="m-group-date">${fmtYM(info.start)} ~ ${fmtYM(info.end)}</span></div>`;
+      toShow.forEach(task => {
+        const rc = rowClass(task);
+        const d = document.createElement('div');
+        d.className = `m-card ${rc}`;
+        d.innerHTML = `
+          <div class="m-card-title">${task.subTitle||task.title||''}</div>
+          <div class="m-card-meta">
+            <span style="${avStyle(task.member,20)}">${avChar(task.member)}</span>
+            <span>${task.member}</span>
+            ${statusBadge(task.status)}
+            <span style="white-space:nowrap;">${fmtYM(task.start)}${task.end?' ~ '+fmtYM(task.end):''}</span>
+          </div>
+          ${task.note?`<div class="m-card-note">${task.note}</div>`:''}
+          <div class="m-card-actions">${editBtn(task)}${deleteBtn(task)}</div>`;
+        group.appendChild(d);
+      });
+      wrap.appendChild(group);
+    });
+    if (!wrap.children.length) {
+      wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">등록된 업무가 없습니다</div>';
+    }
+    tableWrap.appendChild(wrap);
+  }
 
   // ── 초기 로드 ──
   document.addEventListener('DOMContentLoaded', () => { updateWeekUI(); }, { once: true });
