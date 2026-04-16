@@ -780,7 +780,7 @@
     const tabsEl = document.getElementById('member-tabs');
     if (tabsEl) {
       tabsEl.innerHTML = ALL_USERS.map(u =>
-        `<button class="tab-btn" data-tab="m-${u.id}">${u.name} <span style="font-size:10px;opacity:.6;">${u.role}</span></button>`
+        `<button class="tab-btn" data-tab="m-${u.id}">${u.name}</button>`
       ).join('');
     }
     const viewsEl = document.getElementById('member-views');
