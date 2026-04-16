@@ -385,13 +385,8 @@
           <div class="table-wrap" style="margin-bottom:0;">
             <table>
               <thead><tr>
-                <th>메인 업무</th>
+                <th style="width:180px;">메인 업무</th>
                 <th>서브 업무</th>
-                <th>담당자</th>
-                <th>상태</th>
-                <th>시작일</th>
-                <th>마감일</th>
-                <th>비고</th>
               </tr></thead>
               <tbody id="tbody-report-last"></tbody>
             </table>
@@ -407,13 +402,8 @@
           <div class="table-wrap" style="margin-bottom:0;">
             <table>
               <thead><tr>
-                <th>메인 업무</th>
+                <th style="width:180px;">메인 업무</th>
                 <th>서브 업무</th>
-                <th>담당자</th>
-                <th>상태</th>
-                <th>시작일</th>
-                <th>마감일</th>
-                <th>비고</th>
               </tr></thead>
               <tbody id="tbody-report-this"></tbody>
             </table>
@@ -899,24 +889,22 @@
       let html = '';
       groups.forEach((subs, mainTitle) => {
         const info = calcMain(subs);
-        subs.forEach((task, i) => {
-          const rc = rowClass(task);
-          const mainHtml = i === 0 ? `<td class="main-cell" rowspan="${subs.length}" style="vertical-align:top;padding:8px 10px;white-space:nowrap;">
-            <div style="font-weight:700;font-size:13px;color:${info.allDone ? 'var(--text-muted)' : 'var(--text-primary)'};">${mainTitle}</div>
-            <div style="font-size:11px;color:${info.allDone ? 'var(--text-muted)' : 'var(--text-secondary)'};margin-top:3px;">${fmtYM(info.start)}~${fmtYM(info.end)}</div>
-          </td>` : '';
-          html += `<tr class="${rc}">
-            ${mainHtml}
-            <td><div style="font-weight:600;">${task.subTitle||''}</div></td>
-            <td><div class="av-cell"><span style="${avStyle(task.member,20)}">${avChar(task.member)}</span><span style="font-size:12px;">${task.member}</span></div></td>
-            <td>${statusBadge(task.status)}</td>
-            <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">${fmtYM(task.start)}</td>
-            <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">${fmtYM(task.end)}</td>
-            <td style="font-size:12px;color:var(--text-secondary);">${task.note||''}</td>
-          </tr>`;
-        });
+        // 서브 업무들을 한 줄로: "업무명(상태), 업무명(상태)"
+        const subsLine = subs.map(s => {
+          const statusMap = { '완료':'완료', '진행 중':'진행 중', '예정':'예정', '보류':'보류' };
+          return `${s.subTitle||s.title||''}(${statusMap[s.status]||s.status})`;
+        }).join(', ');
+        const allDone = info.allDone;
+        const rowStyle = allDone ? 'opacity:0.6;' : '';
+        html += `<tr style="${rowStyle}">
+          <td style="vertical-align:top;padding:9px 12px;white-space:nowrap;font-weight:700;font-size:13px;">
+            ${mainTitle}
+            <div style="font-size:11px;color:var(--text-secondary);font-weight:400;margin-top:2px;">${fmtYM(info.start)} ~ ${fmtYM(info.end)}</div>
+          </td>
+          <td style="vertical-align:top;padding:9px 12px;font-size:13px;color:var(--text-primary);line-height:1.6;">${subsLine}</td>
+        </tr>`;
       });
-      tbody.innerHTML = html || `<tr><td colspan="7" style="color:var(--text-muted);text-align:center;padding:20px;">이 주차에 등록된 업무가 없습니다</td></tr>`;
+      tbody.innerHTML = html || `<tr><td colspan="2" style="color:var(--text-muted);text-align:center;padding:20px;">이 주차에 등록된 업무가 없습니다</td></tr>`;
     }
 
     renderReportTable(lastWeekTasks, 'tbody-report-last');
