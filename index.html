@@ -936,7 +936,7 @@
     const sel = document.getElementById('f-member');
     if (!sel) return;
     const cur = sel.value;
-    sel.innerHTML = ALL_USERS.map(u => `<option value="${u.name} (${u.role})">${u.name} (${u.role})</option>`).join('');
+    sel.innerHTML = ALL_USERS.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
     if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
   }
 
@@ -989,7 +989,7 @@
       document.getElementById('f-note').value     = task.note      || '';
       updateMemberSelect();
       const sel = document.getElementById('f-member');
-      if (task.member && [...sel.options].some(o=>o.value===task.member)) sel.value = task.member;
+      if (task.member) { const match = [...sel.options].find(o => task.member.includes(o.value) || o.value === task.member); if (match) sel.value = match.value; }
       const ss = document.getElementById('f-status');
       for (let i=0;i<ss.options.length;i++) { if (ss.options[i].value===task.status) { ss.selectedIndex=i; break; } }
     } else {
@@ -1246,9 +1246,7 @@
 
   // ── 구글 시트 ──
   function openSheet() {
-    const ssId = typeof SPREADSHEET_ID !== 'undefined' ? SPREADSHEET_ID : '';
-    if (ssId) window.open('https://docs.google.com/spreadsheets/d/' + ssId, '_blank');
-    else showToast('구글 시트 ID가 없습니다');
+    window.open('https://docs.google.com/spreadsheets/d/1EZQomzzNW18gS1-f9O6FHoGj13mi4l_vLLF6jxifDr4/edit', '_blank');
   }
 
   // ── 샘플 데이터 ──
