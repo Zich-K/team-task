@@ -978,14 +978,17 @@
       const subsLine = subs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ');
 
       const row = document.createElement('div');
-      row.className = `report-edit-row${highlighted ? ' highlighted' : ''}`;
+      // 하이라이트는 체크박스와 무관하게 별도 data 속성으로만 관리
+      row.className = 'report-edit-row';
       row.dataset.key = mainTitle;
+      row.dataset.highlighted = highlighted ? 'true' : 'false';
+      if (highlighted) row.style.borderLeft = '3px solid #f9a825';
       row.innerHTML = `
         <span class="drag-handle">⠿</span>
         <input type="checkbox" class="report-check" ${checked ? 'checked' : ''} onchange="updateReportSettings('${key}')">
         <div class="report-edit-main">${mainTitle}</div>
         <div class="report-edit-sub">${subsLine}</div>
-        <button class="hl-btn ${highlighted ? 'on' : ''}" onclick="toggleHighlight(this, '${key}')" title="하이라이트">★</button>
+        <button class="hl-btn ${highlighted ? 'on' : ''}" onclick="toggleHighlight(this, '${key}')" title="하이라이트 (출력시 노란 음영)">★</button>
         <div class="report-move-btns">
           <button class="report-move-btn" onclick="moveRow(this, -1, '${key}')">▲</button>
           <button class="report-move-btn" onclick="moveRow(this, 1, '${key}')">▼</button>
@@ -1008,8 +1011,10 @@
 
   function toggleHighlight(btn, key) {
     const row = btn.closest('.report-edit-row');
-    row.classList.toggle('highlighted');
-    btn.classList.toggle('on');
+    const isOn = row.dataset.highlighted === 'true';
+    row.dataset.highlighted = isOn ? 'false' : 'true';
+    row.style.borderLeft = isOn ? '' : '3px solid #f9a825';
+    btn.classList.toggle('on', !isOn);
     updateReportSettings(key);
   }
 
@@ -1038,13 +1043,12 @@
       const mainTitle = r.dataset.key;
       settings[mainTitle] = {
         checked: r.querySelector('.report-check').checked,
-        highlighted: r.classList.contains('highlighted')
+        highlighted: r.dataset.highlighted === 'true'
       };
     });
     reportSettings[key] = settings;
 
     // 테이블 업데이트
-    const lastWeekTasks = ALL_TASKS.filter(t => taskInWeek(t, new Date(currentMonday).setDate(new Date(currentMonday).getDate() - 7) && t));
     renderReportTableFromSettings(tbodyId, key);
   }
 
@@ -1061,7 +1065,7 @@
     rows.forEach(row => {
       const mainTitle = row.dataset.key;
       const checked = row.querySelector('.report-check').checked;
-      const highlighted = row.classList.contains('highlighted');
+      const highlighted = row.dataset.highlighted === 'true';
       if (!checked) return;
 
       const subs = ALL_TASKS.filter(t => (t.mainTitle || t.title) === mainTitle);
@@ -1424,6 +1428,9 @@
   function printReport() {
     const btn = document.querySelector('.tab-btn.tab-report');
     if (btn) switchTab('report', btn);
+    // 출력 전 편집 패널 기준으로 테이블 강제 업데이트
+    renderReportTableFromSettings('tbody-report-last', 'last');
+    renderReportTableFromSettings('tbody-report-this', 'this');
     setTimeout(() => window.print(), 300);
   }
 
