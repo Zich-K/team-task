@@ -160,6 +160,29 @@
   .stay-tooltip.show { opacity: 1; transform: translateY(0); }
   tr.row-long td { cursor: pointer; }
 
+
+  /* ── 리포트 편집 모드 ── */
+  .report-edit-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 0.5px solid var(--border); background: var(--surface); cursor: grab; transition: background .15s; }
+  .report-edit-row:last-child { border-bottom: none; }
+  .report-edit-row:hover { background: var(--surface2); }
+  .report-edit-row.sortable-ghost { opacity: 0.4; background: var(--accent-light); }
+  .report-edit-row.highlighted { background: #fffde7; }
+  .report-edit-row.highlighted.sortable-ghost { opacity: 0.4; }
+  .drag-handle { color: var(--text-muted); cursor: grab; font-size: 16px; flex-shrink: 0; }
+  .report-check { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .report-edit-main { font-weight: 700; font-size: 13px; flex: 1; }
+  .report-edit-sub { font-size: 12px; color: var(--text-secondary); flex: 2; }
+  .report-move-btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .report-move-btn { width: 22px; height: 18px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+  .report-move-btn:hover { background: var(--surface2); }
+  .hl-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #f9a825; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; transition: background .15s; }
+  .hl-btn.on { background: #fffde7; }
+  .report-edit-wrap { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 12px; }
+  @media print {
+    .report-edit-controls { display: none !important; }
+    tr.report-hidden { display: none !important; }
+    tr.report-highlight td { background: #fffde7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
   /* ── 리포트 ── */
   .report-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
   .report-header { padding: 20px 24px; background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -233,6 +256,7 @@
   body.portrait .m-cards { display: flex !important; flex-direction: column; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -375,16 +399,27 @@
           <div class="metric-card metric-green"><div class="metric-label">완료</div><div class="metric-value" id="r-done-cnt">0</div><div class="metric-sub">이번 주 완료</div></div>
           <div class="metric-card metric-red"><div class="metric-label">3주 이상 진행</div><div class="metric-value" id="r-long">0</div><div class="metric-sub">점검 필요</div></div>
         </div>
-        <!-- 지난주 -->
-        <div style="padding:20px 24px 0;">
+        <!-- 편집 컨트롤 -->
+        <div class="report-edit-controls" style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:13px;color:var(--text-secondary);">표시할 업무를 선택하고 순서를 조정하세요</span>
+          <button class="btn btn-primary" onclick="saveReportSettings()" style="margin-left:auto;">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 2h8l2 2v8a1 1 0 01-1 1H3a1 1 0 01-1-1V2z"/><rect x="4" y="8" width="6" height="4"/><rect x="4" y="2" width="5" height="3"/></svg>
+            저장
+          </button>
+        </div>
+
+        <!-- 지난주 편집 -->
+        <div style="padding:16px 24px 0;">
           <div style="font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
             <span style="display:inline-block;width:4px;height:16px;background:var(--text-secondary);border-radius:2px;"></span>
             지난주 한 일
             <span style="font-size:12px;font-weight:400;color:var(--text-muted);" id="report-last-label"></span>
           </div>
+          <div class="report-edit-wrap no-print" id="edit-last"></div>
           <div class="table-wrap" style="margin-bottom:0;">
             <table>
               <thead><tr>
+                <th style="width:32px;">#</th>
                 <th style="width:180px;">메인 업무</th>
                 <th>서브 업무</th>
               </tr></thead>
@@ -392,16 +427,19 @@
             </table>
           </div>
         </div>
-        <!-- 이번주 -->
-        <div style="padding:20px 24px 24px;">
+
+        <!-- 이번주 편집 -->
+        <div style="padding:16px 24px 24px;">
           <div style="font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
             <span style="display:inline-block;width:4px;height:16px;background:var(--accent);border-radius:2px;"></span>
             이번주 진행 업무
             <span style="font-size:12px;font-weight:400;color:var(--text-muted);" id="report-this-label"></span>
           </div>
+          <div class="report-edit-wrap no-print" id="edit-this"></div>
           <div class="table-wrap" style="margin-bottom:0;">
             <table>
               <thead><tr>
+                <th style="width:32px;">#</th>
                 <th style="width:180px;">메인 업무</th>
                 <th>서브 업무</th>
               </tr></thead>
@@ -882,33 +920,189 @@
     if (rLong)  rLong.textContent  = ALL_TASKS.filter(t => isLongRunning(t)).length;
 
     // 테이블 렌더 (대시보드와 동일 형태, 수정/삭제 버튼 없음)
-    function renderReportTable(tasks, tbodyId) {
+    function renderReportTable(tasks, tbodyId, editId, key) {
+      if (editId && document.getElementById(editId) && document.getElementById(editId).children.length > 0) {
+        renderReportTableFromSettings(tbodyId, key);
+        return;
+      }
       const tbody = document.getElementById(tbodyId);
       if (!tbody) return;
       const groups = groupByMain(tasks);
       let html = '';
+      let num = 1;
       groups.forEach((subs, mainTitle) => {
         const info = calcMain(subs);
-        // 서브 업무들을 한 줄로: "업무명(상태), 업무명(상태)"
-        const subsLine = subs.map(s => {
-          const statusMap = { '완료':'완료', '진행 중':'진행 중', '예정':'예정', '보류':'보류' };
-          return `${s.subTitle||s.title||''}(${statusMap[s.status]||s.status})`;
-        }).join(', ');
-        const allDone = info.allDone;
-        const rowStyle = allDone ? 'opacity:0.6;' : '';
-        html += `<tr style="${rowStyle}">
+        const subsLine = subs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ');
+        html += `<tr>
+          <td style="vertical-align:top;padding:9px 12px;text-align:center;font-weight:700;font-size:13px;color:var(--text-muted);">${num++}</td>
           <td style="vertical-align:top;padding:9px 12px;white-space:nowrap;font-weight:700;font-size:13px;">
             ${mainTitle}
             <div style="font-size:11px;color:var(--text-secondary);font-weight:400;margin-top:2px;">${fmtYM(info.start)} ~ ${fmtYM(info.end)}</div>
           </td>
-          <td style="vertical-align:top;padding:9px 12px;font-size:13px;color:var(--text-primary);line-height:1.6;">${subsLine}</td>
+          <td style="vertical-align:top;padding:9px 12px;font-size:13px;line-height:1.6;">${subsLine}</td>
         </tr>`;
       });
-      tbody.innerHTML = html || `<tr><td colspan="2" style="color:var(--text-muted);text-align:center;padding:20px;">이 주차에 등록된 업무가 없습니다</td></tr>`;
+      tbody.innerHTML = html || `<tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:20px;">이 주차에 등록된 업무가 없습니다</td></tr>`;
     }
 
-    renderReportTable(lastWeekTasks, 'tbody-report-last');
-    renderReportTable(thisWeekTasks, 'tbody-report-this');
+    renderEditPanel(lastWeekTasks, 'edit-last', 'tbody-report-last', 'last');
+    renderEditPanel(thisWeekTasks, 'edit-this', 'tbody-report-this', 'this');
+  }
+
+  // ── 리포트 편집 패널 ──
+  let reportSettings = { last: {}, this: {} };
+
+  function renderEditPanel(tasks, editId, tbodyId, key) {
+    const editWrap = document.getElementById(editId);
+    if (!editWrap) return;
+
+    const groups = groupByMain(tasks);
+    const settings = reportSettings[key];
+
+    // 저장된 순서 적용
+    let entries = [...groups.entries()];
+    if (settings.order) {
+      entries.sort((a, b) => {
+        const ai = settings.order.indexOf(a[0]);
+        const bi = settings.order.indexOf(b[0]);
+        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      });
+    }
+
+    editWrap.innerHTML = '';
+    entries.forEach(([mainTitle, subs]) => {
+      const info = calcMain(subs);
+      const saved = settings[mainTitle] || {};
+      const checked = saved.checked !== false;
+      const highlighted = saved.highlighted || false;
+      const subsLine = subs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ');
+
+      const row = document.createElement('div');
+      row.className = `report-edit-row${highlighted ? ' highlighted' : ''}`;
+      row.dataset.key = mainTitle;
+      row.innerHTML = `
+        <span class="drag-handle">⠿</span>
+        <input type="checkbox" class="report-check" ${checked ? 'checked' : ''} onchange="updateReportSettings('${key}')">
+        <div class="report-edit-main">${mainTitle}</div>
+        <div class="report-edit-sub">${subsLine}</div>
+        <button class="hl-btn ${highlighted ? 'on' : ''}" onclick="toggleHighlight(this, '${key}')" title="하이라이트">★</button>
+        <div class="report-move-btns">
+          <button class="report-move-btn" onclick="moveRow(this, -1, '${key}')">▲</button>
+          <button class="report-move-btn" onclick="moveRow(this, 1, '${key}')">▼</button>
+        </div>`;
+      editWrap.appendChild(row);
+    });
+
+    // Sortable 드래그앤드롭
+    if (typeof Sortable !== 'undefined') {
+      new Sortable(editWrap, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        onEnd: () => updateReportSettings(key)
+      });
+    }
+
+    renderReportTable(tasks, tbodyId, editId, key);
+  }
+
+  function toggleHighlight(btn, key) {
+    const row = btn.closest('.report-edit-row');
+    row.classList.toggle('highlighted');
+    btn.classList.toggle('on');
+    updateReportSettings(key);
+  }
+
+  function moveRow(btn, dir, key) {
+    const row = btn.closest('.report-edit-row');
+    const wrap = row.parentElement;
+    const rows = [...wrap.children];
+    const idx = rows.indexOf(row);
+    const target = rows[idx + dir];
+    if (!target) return;
+    if (dir === -1) wrap.insertBefore(row, target);
+    else wrap.insertBefore(target, row);
+    updateReportSettings(key);
+  }
+
+  function updateReportSettings(key) {
+    const editId = key === 'last' ? 'edit-last' : 'edit-this';
+    const tbodyId = key === 'last' ? 'tbody-report-last' : 'tbody-report-this';
+    const editWrap = document.getElementById(editId);
+    if (!editWrap) return;
+
+    const rows = [...editWrap.querySelectorAll('.report-edit-row')];
+    const order = rows.map(r => r.dataset.key);
+    const settings = { order };
+    rows.forEach(r => {
+      const mainTitle = r.dataset.key;
+      settings[mainTitle] = {
+        checked: r.querySelector('.report-check').checked,
+        highlighted: r.classList.contains('highlighted')
+      };
+    });
+    reportSettings[key] = settings;
+
+    // 테이블 업데이트
+    const lastWeekTasks = ALL_TASKS.filter(t => taskInWeek(t, new Date(currentMonday).setDate(new Date(currentMonday).getDate() - 7) && t));
+    renderReportTableFromSettings(tbodyId, key);
+  }
+
+  function renderReportTableFromSettings(tbodyId, key) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    const editId = key === 'last' ? 'edit-last' : 'edit-this';
+    const editWrap = document.getElementById(editId);
+    if (!editWrap) return;
+
+    const rows = [...editWrap.querySelectorAll('.report-edit-row')];
+    let html = '';
+    let num = 1;
+    rows.forEach(row => {
+      const mainTitle = row.dataset.key;
+      const checked = row.querySelector('.report-check').checked;
+      const highlighted = row.classList.contains('highlighted');
+      if (!checked) return;
+
+      const subs = ALL_TASKS.filter(t => (t.mainTitle || t.title) === mainTitle);
+      if (!subs.length) return;
+      const info = calcMain(subs);
+      const subsLine = subs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ');
+      const hlStyle = highlighted ? 'background:#fffde7;' : '';
+
+      html += `<tr class="${highlighted ? 'report-highlight' : ''}">
+        <td style="vertical-align:top;padding:9px 12px;text-align:center;font-weight:700;font-size:13px;color:var(--text-muted);${hlStyle}">${num++}</td>
+        <td style="vertical-align:top;padding:9px 12px;white-space:nowrap;font-weight:700;font-size:13px;${hlStyle}">
+          ${mainTitle}
+          <div style="font-size:11px;color:var(--text-secondary);font-weight:400;margin-top:2px;">${fmtYM(info.start)} ~ ${fmtYM(info.end)}</div>
+        </td>
+        <td style="vertical-align:top;padding:9px 12px;font-size:13px;line-height:1.6;${hlStyle}">${subsLine}</td>
+      </tr>`;
+    });
+
+    tbody.innerHTML = html || `<tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:20px;">선택된 업무가 없습니다</td></tr>`;
+  }
+
+  async function saveReportSettings() {
+    const data = JSON.stringify(reportSettings);
+    if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+      const result = await api({ action: 'saveReportSettings', data });
+      if (result && result.ok) showToast('✓ 저장되었습니다');
+      else showToast('저장 실패');
+    } else {
+      try { localStorage.setItem('reportSettings', data); showToast('✓ 저장되었습니다'); } catch(e) { showToast('저장 실패'); }
+    }
+  }
+
+  async function loadReportSettings() {
+    if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+      const result = await api({ action: 'getReportSettings' });
+      if (result && result.data) {
+        try { reportSettings = JSON.parse(result.data); } catch(e) {}
+      }
+    } else {
+      try { const s = localStorage.getItem('reportSettings'); if (s) reportSettings = JSON.parse(s); } catch(e) {}
+    }
   }
 
   // ── 메트릭 ──
@@ -1092,6 +1286,7 @@
     } else {
       ALL_USERS = getDefaultUsers();
     }
+    await loadReportSettings();
     renderAll();
   }
   function showLoading(on) {
@@ -1328,7 +1523,7 @@
     } else {
       ALL_TASKS = SAMPLE_TASKS;
       ALL_USERS = getDefaultUsers();
-      renderAll();
+      loadReportSettings().then(() => renderAll());
     }
   });
 </script>
