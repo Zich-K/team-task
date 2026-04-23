@@ -183,6 +183,57 @@
     tr.report-hidden { display: none !important; }
     tr.report-highlight td { background: #fffde7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
+
+  /* ── 캘린더 ── */
+  .cal-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px; }
+  .cal-nav { display:flex; align-items:center; gap:6px; }
+  .cal-nav-btn { width:28px; height:28px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--text-secondary); }
+  .cal-nav-btn:hover { background:var(--surface2); }
+  .cal-nav-label { font-size:15px; font-weight:700; min-width:160px; text-align:center; }
+  .cal-view-toggle { display:flex; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  .cal-view-btn { padding:5px 16px; font-size:12px; font-family:var(--font); background:var(--surface); border:none; cursor:pointer; color:var(--text-secondary); }
+  .cal-view-btn.active { background:var(--accent); color:#fff; font-weight:600; }
+  .cal-legend { display:flex; gap:14px; margin-bottom:12px; flex-wrap:wrap; }
+  .cal-leg { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text-secondary); }
+  .cal-leg-dot { width:10px; height:10px; border-radius:3px; }
+  /* 월간 */
+  .cal-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow); }
+  .cal-head { display:grid; grid-template-columns:repeat(7,1fr); background:var(--surface2); }
+  .cal-head-cell { padding:8px 0; text-align:center; font-size:11px; font-weight:600; color:var(--text-secondary); border-right:0.5px solid var(--border); }
+  .cal-head-cell:last-child { border-right:none; }
+  .cal-body { display:grid; grid-template-columns:repeat(7,1fr); }
+  .cal-cell { min-height:90px; border-right:0.5px solid var(--border); border-bottom:0.5px solid var(--border); padding:4px; background:var(--surface); }
+  .cal-cell:nth-child(7n) { border-right:none; }
+  .cal-cell.other { background:var(--surface2); opacity:0.6; }
+  .cal-cell.today-cell { background:#f0faf0; }
+  .cal-date { font-size:11px; font-weight:600; color:var(--text-secondary); margin-bottom:2px; width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:50%; }
+  .today-cell .cal-date { background:var(--accent); color:#fff; }
+  .cal-event { font-size:10px; padding:2px 5px; border-radius:3px; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+  .cal-event:hover { opacity:0.8; }
+  .ev-meeting { background:#e8eef7; color:#1a3f6b; }
+  .ev-task { background:#eaf3e8; color:#2d5a27; }
+  .ev-leave { background:#fdf3e3; color:#7a4a10; }
+  /* 주간 */
+  .week-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow); }
+  .week-head { display:grid; grid-template-columns:50px repeat(7,1fr); background:var(--surface2); }
+  .week-head-time { border-right:0.5px solid var(--border); }
+  .week-head-day { padding:8px 4px; text-align:center; border-right:0.5px solid var(--border); }
+  .week-head-day:last-child { border-right:none; }
+  .week-day-name { font-size:11px; color:var(--text-secondary); font-weight:600; }
+  .week-day-num { font-size:18px; font-weight:500; }
+  .week-day-num.today-n { background:var(--accent); color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; margin:2px auto 0; font-size:14px; }
+  .week-body { display:grid; grid-template-columns:50px repeat(7,1fr); }
+  .week-time-col { border-right:0.5px solid var(--border); }
+  .week-time-slot { height:48px; border-bottom:0.5px solid var(--border); padding:2px 4px; font-size:10px; color:var(--text-muted); text-align:right; }
+  .week-day-col { border-right:0.5px solid var(--border); position:relative; }
+  .week-day-col:last-child { border-right:none; }
+  .week-slot { height:48px; border-bottom:0.5px solid var(--border); }
+  .week-event { position:absolute; left:2px; right:2px; border-radius:4px; padding:2px 5px; font-size:10px; font-weight:600; overflow:hidden; cursor:pointer; }
+  .week-event:hover { opacity:0.85; }
+  /* 일정 추가 모달 */
+  .cal-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center; }
+  .cal-modal-overlay.open { display:flex; }
+
   /* ── 리포트 ── */
   .report-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
   .report-header { padding: 20px 24px; background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -297,6 +348,7 @@
       <button class="tab-btn active" data-tab="dashboard">대시보드</button>
       <div id="member-tabs"></div>
       <button class="tab-btn" data-tab="team">팀 합본</button>
+      <button class="tab-btn" data-tab="calendar">📅 캘린더</button>
       <button class="tab-btn tab-report" data-tab="report">📋 주간 리포트</button>
       <button class="tab-btn no-print" onclick="openSheet()" style="color:var(--info);font-weight:600;">📊 구글 시트</button>
     </div>
@@ -373,6 +425,96 @@
             <thead><tr><th>메인 업무</th><th>서브 업무</th><th>담당자</th><th>상태</th><th>비고</th></tr></thead>
             <tbody id="tbody-team-next"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- 캘린더 -->
+    <div class="view" id="tab-calendar">
+      <div class="cal-toolbar">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="calNavigate(-1)">&#8249;</button>
+          <span class="cal-nav-label" id="cal-nav-label"></span>
+          <button class="cal-nav-btn" onclick="calNavigate(1)">&#8250;</button>
+          <button class="week-nav-today" onclick="calGoToday()" style="margin-left:4px;">오늘</button>
+        </div>
+        <div class="cal-view-toggle">
+          <button class="cal-view-btn active" id="cal-btn-month" onclick="calSwitchView('month')">월간</button>
+          <button class="cal-view-btn" id="cal-btn-week" onclick="calSwitchView('week')">주간</button>
+        </div>
+        <button class="btn" style="background:var(--warn-light);color:var(--warn);border-color:var(--warn);" onclick="openCalModal()">
+          + 직접 입력
+        </button>
+      </div>
+      <div class="cal-legend">
+        <div class="cal-leg"><div class="cal-leg-dot ev-meeting"></div> 아웃룩 미팅</div>
+        <div class="cal-leg"><div class="cal-leg-dot ev-task"></div> 업무 마감일</div>
+        <div class="cal-leg"><div class="cal-leg-dot ev-leave"></div> 연차/휴가</div>
+      </div>
+      <div id="cal-month-view">
+        <div class="cal-wrap">
+          <div class="cal-head">
+            <div class="cal-head-cell">일</div>
+            <div class="cal-head-cell">월</div>
+            <div class="cal-head-cell">화</div>
+            <div class="cal-head-cell">수</div>
+            <div class="cal-head-cell">목</div>
+            <div class="cal-head-cell">금</div>
+            <div class="cal-head-cell">토</div>
+          </div>
+          <div class="cal-body" id="cal-body"></div>
+        </div>
+      </div>
+      <div id="cal-week-view" style="display:none;">
+        <div class="week-wrap">
+          <div class="week-head">
+            <div class="week-head-time"></div>
+            <div class="week-head-day" id="wh0"></div>
+            <div class="week-head-day" id="wh1"></div>
+            <div class="week-head-day" id="wh2"></div>
+            <div class="week-head-day" id="wh3"></div>
+            <div class="week-head-day" id="wh4"></div>
+            <div class="week-head-day" id="wh5"></div>
+            <div class="week-head-day" id="wh6"></div>
+          </div>
+          <div class="week-body" id="week-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 일정 추가 모달 -->
+    <div class="cal-modal-overlay" id="cal-modal-overlay">
+      <div class="modal">
+        <div class="modal-title">일정 직접 입력</div>
+        <div class="form-row">
+          <label class="form-label">종류</label>
+          <select class="form-select" id="cal-type">
+            <option value="leave">연차/휴가</option>
+            <option value="meeting">미팅/회의</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">제목</label>
+          <input class="form-input" type="text" id="cal-title" placeholder="예: 김승현 연차">
+        </div>
+        <div class="form-row">
+          <label class="form-label">담당자</label>
+          <select class="form-select" id="cal-who"></select>
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label class="form-label">날짜</label>
+            <input class="form-input" type="date" id="cal-date">
+          </div>
+          <div class="form-row">
+            <label class="form-label">시간 (선택)</label>
+            <input class="form-input" type="time" id="cal-time">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" onclick="closeCalModal()">취소</button>
+          <button class="btn btn-primary" onclick="saveCalEvent()">저장</button>
         </div>
       </div>
     </div>
@@ -785,6 +927,7 @@
     renderReport();
     updateMetrics();
     updateMemberSelect();
+    if (currentTabId === 'calendar') renderCal();
   }
 
   // ── 대시보드 ──
@@ -1139,6 +1282,7 @@
     } else {
       const view = document.getElementById('tab-' + tabId);
       if (view) view.classList.add('active');
+      if (tabId === 'calendar') renderCal();
     }
   }
 
@@ -1291,6 +1435,7 @@
       ALL_USERS = getDefaultUsers();
     }
     await loadReportSettings();
+    await loadCalEvents();
     renderAll();
   }
   function showLoading(on) {
@@ -1522,6 +1667,176 @@
     tableWrap.appendChild(wrap);
   }
 
+
+  // ── 캘린더 ──
+  const CAL_DAYS = ['일','월','화','수','목','금','토'];
+  const CAL_HOURS = [9,10,11,12,13,14,15,16,17,18];
+  let calView = 'month';
+  let calYear = new Date().getFullYear();
+  let calMonth = new Date().getMonth();
+  let calWeekStart = getMonday(new Date());
+  let CAL_EVENTS = []; // 직접 입력 일정
+
+  function fmtCalDate(y, m, d) {
+    return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+
+  function getCalEvents(dateStr) {
+    const events = [];
+    // 업무 마감일
+    ALL_TASKS.forEach(t => {
+      if (t.end && t.end.slice(0,10) === dateStr) {
+        events.push({ type:'task', title: (t.subTitle||t.mainTitle||''), who: t.member });
+      }
+    });
+    // 직접 입력 일정
+    CAL_EVENTS.forEach(e => {
+      if (e.date === dateStr) events.push(e);
+    });
+    return events;
+  }
+
+  function renderCalMonth() {
+    const today = new Date();
+    document.getElementById('cal-nav-label').textContent = `${calYear}년 ${calMonth+1}월`;
+    const body = document.getElementById('cal-body');
+    const first = new Date(calYear, calMonth, 1).getDay();
+    const days = new Date(calYear, calMonth+1, 0).getDate();
+    const prevDays = new Date(calYear, calMonth, 0).getDate();
+    const cells = (first + days) <= 35 ? 35 : 42;
+    let html = '';
+    for (let i = 0; i < cells; i++) {
+      let d, m = calMonth, y = calYear, other = false;
+      if (i < first) { d = prevDays-first+i+1; m=calMonth-1; if(m<0){m=11;y--;} other=true; }
+      else if (i >= first+days) { d=i-first-days+1; m=calMonth+1; if(m>11){m=0;y++;} other=true; }
+      else { d = i-first+1; }
+      const isToday = y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
+      const dateStr = fmtCalDate(y, m, d);
+      const evs = getCalEvents(dateStr);
+      html += `<div class="cal-cell${other?' other':''}${isToday?' today-cell':''}">
+        <div class="cal-date">${d}</div>
+        ${evs.slice(0,3).map(e=>`<div class="cal-event ev-${e.type}" title="${e.who||''}">${e.time?e.time+' ':''}${e.title}</div>`).join('')}
+        ${evs.length>3?`<div style="font-size:10px;color:var(--text-muted);padding:1px 4px;">+${evs.length-3}개</div>`:''}
+      </div>`;
+    }
+    body.innerHTML = html;
+  }
+
+  function renderCalWeek() {
+    const today = new Date();
+    const mon = new Date(calWeekStart);
+    const end = new Date(mon); end.setDate(end.getDate()+6);
+    document.getElementById('cal-nav-label').textContent =
+      `${mon.getMonth()+1}월 ${mon.getDate()}일 - ${end.getMonth()+1}월 ${end.getDate()}일`;
+
+    for (let i=0; i<7; i++) {
+      const d = new Date(mon); d.setDate(d.getDate()+i);
+      const isToday = d.toDateString()===today.toDateString();
+      document.getElementById('wh'+i).innerHTML = `
+        <div class="week-day-name">${CAL_DAYS[d.getDay()]}</div>
+        <div class="week-day-num${isToday?' today-n':''}">${d.getDate()}</div>`;
+    }
+
+    const body = document.getElementById('week-body');
+    let html = `<div class="week-time-col">${CAL_HOURS.map(h=>`<div class="week-time-slot">${h}:00</div>`).join('')}</div>`;
+    for (let i=0; i<7; i++) {
+      const d = new Date(mon); d.setDate(d.getDate()+i);
+      const dateStr = fmtCalDate(d.getFullYear(), d.getMonth(), d.getDate());
+      const evs = getCalEvents(dateStr);
+      const timedEvs = evs.filter(e=>e.time);
+      const allDayEvs = evs.filter(e=>!e.time);
+      html += `<div class="week-day-col">
+        ${CAL_HOURS.map(()=>'<div class="week-slot"></div>').join('')}
+        ${allDayEvs.map(e=>`<div class="week-event ev-${e.type}" style="top:4px;height:20px;">${e.title}</div>`).join('')}
+        ${timedEvs.map(e=>{
+          const h=parseInt(e.time); const top=(h-9)*48+24;
+          return `<div class="week-event ev-${e.type}" style="top:${top}px;height:44px;">${e.time} ${e.title}<br><span style="font-weight:400;opacity:.8;font-size:9px;">${e.who||''}</span></div>`;
+        }).join('')}
+      </div>`;
+    }
+    body.innerHTML = html;
+  }
+
+  function renderCal() {
+    if (calView==='month') renderCalMonth(); else renderCalWeek();
+  }
+
+  function calNavigate(dir) {
+    if (calView==='month') {
+      calMonth+=dir;
+      if(calMonth>11){calMonth=0;calYear++;}
+      if(calMonth<0){calMonth=11;calYear--;}
+    } else {
+      calWeekStart = new Date(calWeekStart);
+      calWeekStart.setDate(calWeekStart.getDate()+dir*7);
+    }
+    renderCal();
+  }
+
+  function calGoToday() {
+    const t = new Date();
+    calYear=t.getFullYear(); calMonth=t.getMonth();
+    calWeekStart=getMonday(t);
+    renderCal();
+  }
+
+  function calSwitchView(v) {
+    calView=v;
+    document.getElementById('cal-month-view').style.display = v==='month'?'block':'none';
+    document.getElementById('cal-week-view').style.display = v==='week'?'block':'none';
+    document.getElementById('cal-btn-month').className='cal-view-btn'+(v==='month'?' active':'');
+    document.getElementById('cal-btn-week').className='cal-view-btn'+(v==='week'?' active':'');
+    renderCal();
+  }
+
+  function openCalModal() {
+    const sel = document.getElementById('cal-who');
+    sel.innerHTML = ALL_USERS.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+    document.getElementById('cal-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('cal-title').value = '';
+    document.getElementById('cal-time').value = '';
+    document.getElementById('cal-modal-overlay').classList.add('open');
+  }
+
+  function closeCalModal() {
+    document.getElementById('cal-modal-overlay').classList.remove('open');
+  }
+
+  async function saveCalEvent() {
+    const title = document.getElementById('cal-title').value.trim();
+    const date = document.getElementById('cal-date').value;
+    if (!title || !date) { showToast('제목과 날짜를 입력해주세요'); return; }
+    const ev = {
+      type: document.getElementById('cal-type').value,
+      title,
+      date,
+      time: document.getElementById('cal-time').value || '',
+      who: document.getElementById('cal-who').value,
+    };
+    CAL_EVENTS.push(ev);
+    closeCalModal();
+    renderCal();
+    // API 저장
+    if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+      const result = await api({ action: 'saveCalEvent', event: JSON.stringify(ev) });
+      if (result && result.ok) showToast('✓ 저장되었습니다');
+      else showToast('저장 실패');
+    } else {
+      showToast('✓ 저장되었습니다 (로컬)');
+    }
+  }
+
+  async function loadCalEvents() {
+    if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+      const result = await api({ action: 'getCalEvents' });
+      if (result && result.events) CAL_EVENTS = result.events;
+    }
+  }
+
+  document.getElementById('cal-modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCalModal();
+  });
+
   // ── 초기 로드 ──
   document.addEventListener('DOMContentLoaded', () => { updateWeekUI(); }, { once: true });
   window.addEventListener('DOMContentLoaded', () => {
@@ -1530,7 +1845,7 @@
     } else {
       ALL_TASKS = SAMPLE_TASKS;
       ALL_USERS = getDefaultUsers();
-      loadReportSettings().then(() => renderAll());
+      Promise.all([loadReportSettings(), loadCalEvents()]).then(() => renderAll());
     }
   });
 </script>
