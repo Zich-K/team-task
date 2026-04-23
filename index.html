@@ -234,6 +234,41 @@
   .cal-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center; }
   .cal-modal-overlay.open { display:flex; }
 
+
+  body.portrait .cal-cell { min-height: 52px; padding: 2px; }
+  body.portrait .cal-event { font-size: 9px; padding: 1px 3px; }
+  body.portrait .cal-date { font-size: 10px; width: 16px; height: 16px; }
+  body.portrait .cal-head-cell { font-size: 10px; padding: 5px 0; }
+  body.portrait .cal-nav-label { font-size: 13px; min-width: 120px; }
+  body.portrait .week-day-num { font-size: 14px; }
+  body.portrait .week-time-slot { font-size: 9px; }
+  body.portrait .week-event { font-size: 9px; }
+
+  /* 일정 상세 팝업 */
+  .cal-detail-popup {
+    display: none; position: fixed; z-index: 2000;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 14px 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    min-width: 220px; max-width: 300px;
+  }
+  .cal-detail-popup.show { display: block; }
+  .cal-detail-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .cal-detail-row { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: flex; gap: 6px; }
+  .cal-detail-close { position: absolute; top: 10px; right: 12px; cursor: pointer; font-size: 16px; color: var(--text-muted); background: none; border: none; }
+
+  /* 날짜 전체 일정 팝업 */
+  .cal-day-popup {
+    display: none; position: fixed; z-index: 2000;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 14px 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    min-width: 240px; max-width: 320px;
+  }
+  .cal-day-popup.show { display: block; }
+  .cal-day-popup-title { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--text-secondary); }
+  .cal-day-popup-close { position: absolute; top: 10px; right: 12px; cursor: pointer; font-size: 16px; color: var(--text-muted); background: none; border: none; }
+
   /* ── 리포트 ── */
   .report-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
   .report-header { padding: 20px 24px; background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -517,6 +552,21 @@
           <button class="btn btn-primary" onclick="saveCalEvent()">저장</button>
         </div>
       </div>
+    </div>
+
+
+    <!-- 일정 상세 팝업 -->
+    <div class="cal-detail-popup" id="cal-detail-popup">
+      <button class="cal-detail-close" onclick="closeCalDetail()">×</button>
+      <div class="cal-detail-title" id="cal-detail-title"></div>
+      <div id="cal-detail-body"></div>
+    </div>
+
+    <!-- 날짜 전체 일정 팝업 -->
+    <div class="cal-day-popup" id="cal-day-popup">
+      <button class="cal-day-popup-close" onclick="closeCalDayPopup()">×</button>
+      <div class="cal-day-popup-title" id="cal-day-popup-title"></div>
+      <div id="cal-day-popup-body"></div>
     </div>
 
     <!-- 주간 리포트 -->
@@ -1713,14 +1763,65 @@
       const isToday = y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
       const dateStr = fmtCalDate(y, m, d);
       const evs = getCalEvents(dateStr);
+      const maxShow = 2;
       html += `<div class="cal-cell${other?' other':''}${isToday?' today-cell':''}">
         <div class="cal-date">${d}</div>
-        ${evs.slice(0,3).map(e=>`<div class="cal-event ev-${e.type}" title="${e.who||''}">${e.time?e.time+' ':''}${e.title}</div>`).join('')}
-        ${evs.length>3?`<div style="font-size:10px;color:var(--text-muted);padding:1px 4px;">+${evs.length-3}개</div>`:''}
+        ${evs.slice(0, maxShow).map((e,idx) => `<div class="cal-event ev-${e.type}" onclick="showCalDetail(event, '${dateStr}', ${idx})">${e.time?e.time+' ':''}${e.title}</div>`).join('')}
+        ${evs.length > maxShow ? `<div style="font-size:10px;color:var(--text-muted);padding:1px 4px;cursor:pointer;" onclick="showCalDayPopup(event, '${dateStr}')">+${evs.length-maxShow}개 더보기</div>` : ''}
       </div>`;
     }
     body.innerHTML = html;
   }
+
+  function showCalDetail(e, dateStr, idx) {
+    e.stopPropagation();
+    const evs = getCalEvents(dateStr);
+    const ev = evs[idx];
+    if (!ev) return;
+    const popup = document.getElementById('cal-detail-popup');
+    document.getElementById('cal-detail-title').textContent = ev.title;
+    const typeLabel = ev.type === 'meeting' ? '아웃룩 미팅' : ev.type === 'task' ? '업무 마감' : '연차/휴가';
+    document.getElementById('cal-detail-body').innerHTML = `
+      <div class="cal-detail-row"><span style="min-width:40px;">종류</span><span>${typeLabel}</span></div>
+      <div class="cal-detail-row"><span style="min-width:40px;">날짜</span><span>${dateStr}</span></div>
+      ${ev.time ? `<div class="cal-detail-row"><span style="min-width:40px;">시간</span><span>${ev.time}</span></div>` : ''}
+      ${ev.who ? `<div class="cal-detail-row"><span style="min-width:40px;">담당자</span><span>${ev.who}</span></div>` : ''}
+    `;
+    const rect = e.target.getBoundingClientRect();
+    popup.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    popup.style.left = Math.min(rect.left, window.innerWidth - 310) + 'px';
+    popup.classList.add('show');
+  }
+
+  function showCalDayPopup(e, dateStr) {
+    e.stopPropagation();
+    const evs = getCalEvents(dateStr);
+    const popup = document.getElementById('cal-day-popup');
+    document.getElementById('cal-day-popup-title').textContent = `${dateStr} 일정 (${evs.length}개)`;
+    document.getElementById('cal-day-popup-body').innerHTML = evs.map((ev, idx) => `
+      <div class="cal-event ev-${ev.type}" style="margin-bottom:6px;font-size:12px;padding:5px 8px;cursor:pointer;white-space:normal;"
+           onclick="closeCalDayPopup();showCalDetail(event, '${dateStr}', ${idx})">
+        ${ev.time ? `<span style="opacity:.7;">${ev.time}</span> ` : ''}${ev.title}
+        ${ev.who ? `<span style="opacity:.6;font-size:11px;"> · ${ev.who}</span>` : ''}
+      </div>`).join('');
+    const rect = e.target.getBoundingClientRect();
+    popup.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    popup.style.left = Math.min(rect.left, window.innerWidth - 330) + 'px';
+    popup.classList.add('show');
+  }
+
+  function closeCalDetail() {
+    document.getElementById('cal-detail-popup').classList.remove('show');
+  }
+
+  function closeCalDayPopup() {
+    document.getElementById('cal-day-popup').classList.remove('show');
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.cal-detail-popup')) closeCalDetail();
+    if (!e.target.closest('.cal-day-popup')) closeCalDayPopup();
+  });
 
   function renderCalWeek() {
     const today = new Date();
@@ -1750,7 +1851,7 @@
         ${allDayEvs.map(e=>`<div class="week-event ev-${e.type}" style="top:4px;height:20px;">${e.title}</div>`).join('')}
         ${timedEvs.map(e=>{
           const h=parseInt(e.time); const top=(h-9)*48+24;
-          return `<div class="week-event ev-${e.type}" style="top:${top}px;height:44px;">${e.time} ${e.title}<br><span style="font-weight:400;opacity:.8;font-size:9px;">${e.who||''}</span></div>`;
+          return `<div class="week-event ev-${e.type}" style="top:${top}px;height:44px;" onclick="showCalDetail(event, '${dateStr}', ${timedEvs.indexOf(e)})">${e.time} ${e.title}<br><span style="font-weight:400;opacity:.8;font-size:9px;">${e.who||''}</span></div>`;
         }).join('')}
       </div>`;
     }
