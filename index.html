@@ -1112,35 +1112,37 @@
     if (rDone)  rDone.textContent  = thisWeekTasks.filter(t => t.status === '완료').length;
     if (rLong)  rLong.textContent  = ALL_TASKS.filter(t => isLongRunning(t)).length;
 
-    // 테이블 렌더 (대시보드와 동일 형태, 수정/삭제 버튼 없음)
-    function renderReportTable(tasks, tbodyId, editId, key) {
-      if (editId && document.getElementById(editId) && document.getElementById(editId).children.length > 0) {
-        renderReportTableFromSettings(tbodyId, key);
-        return;
-      }
-      const tbody = document.getElementById(tbodyId);
-      if (!tbody) return;
-      const groups = groupByMain(tasks);
-      let html = '';
-      let num = 1;
-      groups.forEach((subs, mainTitle) => {
-        const info = calcMain(subs);
-        const subsLine = subs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ');
-        html += `<tr>
-          <td style="vertical-align:top;padding:9px 12px;text-align:center;font-weight:700;font-size:13px;color:var(--text-muted);">${num++}</td>
-          <td style="vertical-align:top;padding:9px 12px;white-space:nowrap;font-weight:700;font-size:13px;">
-            ${mainTitle}
-            <div style="font-size:11px;color:var(--text-secondary);font-weight:400;margin-top:2px;">${fmtYM(info.start)} ~ ${fmtYM(info.end)}</div>
-          </td>
-          <td style="vertical-align:top;padding:9px 12px;font-size:13px;line-height:1.6;">${subsLine}</td>
-        </tr>`;
-      });
-      tbody.innerHTML = html || `<tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:20px;">이 주차에 등록된 업무가 없습니다</td></tr>`;
-    }
+    // 테이블 렌더 - renderReportTable은 전역 함수로 분리됨
 
     renderEditPanel(lastWeekTasks, 'edit-last', 'tbody-report-last', 'last');
     renderEditPanel(thisWeekTasks, 'edit-this', 'tbody-report-this', 'this');
     reportTasksCache = { last: lastWeekTasks, this: thisWeekTasks };
+  }
+
+  // ── 리포트 테이블 렌더 (전역) ──
+  function renderReportTable(tasks, tbodyId, editId, key) {
+    if (editId && document.getElementById(editId) && document.getElementById(editId).children.length > 0) {
+      renderReportTableFromSettings(tbodyId, key);
+      return;
+    }
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    const groups = groupByMain(tasks);
+    let html = '';
+    let num = 1;
+    groups.forEach((subs, mainTitle) => {
+      const info = calcMain(subs);
+      const subsLine = subs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ');
+      html += `<tr>
+        <td style="vertical-align:top;padding:9px 12px;text-align:center;font-weight:700;font-size:13px;color:var(--text-muted);">${num++}</td>
+        <td style="vertical-align:top;padding:9px 12px;white-space:nowrap;font-weight:700;font-size:13px;">
+          ${mainTitle}
+          <div style="font-size:11px;color:var(--text-secondary);font-weight:400;margin-top:2px;">${fmtYM(info.start)} ~ ${fmtYM(info.end)}</div>
+        </td>
+        <td style="vertical-align:top;padding:9px 12px;font-size:13px;line-height:1.6;">${subsLine}</td>
+      </tr>`;
+    });
+    tbody.innerHTML = html || `<tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:20px;">이 주차에 등록된 업무가 없습니다</td></tr>`;
   }
 
   // ── 리포트 편집 패널 ──
