@@ -1140,6 +1140,7 @@
 
     renderEditPanel(lastWeekTasks, 'edit-last', 'tbody-report-last', 'last');
     renderEditPanel(thisWeekTasks, 'edit-this', 'tbody-report-this', 'this');
+    reportTasksCache = { last: lastWeekTasks, this: thisWeekTasks };
   }
 
   // ── 리포트 편집 패널 ──
@@ -1245,6 +1246,9 @@
     renderReportTableFromSettings(tbodyId, key);
   }
 
+  // 리포트 주차별 태스크 캐시
+  let reportTasksCache = { last: [], this: [] };
+
   function renderReportTableFromSettings(tbodyId, key) {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
@@ -1261,7 +1265,9 @@
       const highlighted = row.dataset.highlighted === 'true';
       if (!checked) return;
 
-      const subs = ALL_TASKS.filter(t => (t.mainTitle || t.title) === mainTitle);
+      // 주차 필터된 태스크에서 찾기
+      const cachedTasks = reportTasksCache[key] || ALL_TASKS;
+      const subs = cachedTasks.filter(t => (t.mainTitle || t.title) === mainTitle);
       if (!subs.length) return;
       const info = calcMain(subs);
       const subsLine = subs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ');
