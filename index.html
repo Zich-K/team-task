@@ -309,8 +309,13 @@
     .metric-card { padding: 8px 10px !important; }
     .report-title { font-size: 15px !important; }
     .report-subtitle { font-size: 11px !important; }
+    .report-wrap { padding-top: 0 !important; }
+    .report-header { padding: 8px 16px !important; }
+    #report-combined-table tbody tr { page-break-inside: avoid; }
     #report-combined-table { width: 100%; table-layout: fixed; font-size: 10px; }
     #report-combined-table thead tr th { background: #3d3d3b !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #report-combined-table thead { display: table-header-group; }
+    .print-only { page-break-inside: auto; }
     #report-combined-table td { font-size: 10px; padding: 5px 6px; word-break: keep-all; word-wrap: break-word; line-height: 1.5; }
     #report-combined-table colgroup col:nth-child(1) { width: 22px; }
     #report-combined-table colgroup col:nth-child(2) { width: 110px; }
@@ -638,16 +643,16 @@
         <!-- 통합 테이블 (인쇄용) -->
         <div style="padding:16px 24px 24px;" class="print-only">
           <div class="table-wrap" style="margin-bottom:0;">
-            <table id="report-combined-table">
+            <table id="report-combined-table" style="border-collapse:collapse;">
               <colgroup>
-                <col style="width:22px;">
-                <col style="width:110px;">
+                <col style="width:36px;">
+                <col style="width:145px;">
                 <col>
                 <col>
               </colgroup>
               <thead><tr style="background:#3d3d3b;">
-                <th style="width:24px;border-right:2px solid #555;color:#fff;background:#3d3d3b;">#</th>
-                <th style="width:140px;border-right:2px solid #555;color:#fff;background:#3d3d3b;">메인 업무</th>
+                <th style="width:36px;border-right:2px solid #555;color:#fff;background:#3d3d3b;">#</th>
+                <th style="width:182px;border-right:2px solid #555;color:#fff;background:#3d3d3b;">메인 업무</th>
                 <th style="width:50%;border-right:2px solid #555;color:#fff;background:#3d3d3b;">지난주 한 일</th>
                 <th style="width:50%;color:#fff;background:#3d3d3b;">이번주 진행 업무</th>
               </tr></thead>
