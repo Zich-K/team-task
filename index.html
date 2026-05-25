@@ -294,14 +294,19 @@
 
   /* ── 프린트 ── */
   @media print {
-    @page { size: A4; margin: 15mm; }
+    @page { size: A4 landscape; margin: 12mm; }
     .header, .tabs-wrap, .no-print { display: none !important; }
     .main { padding: 0 !important; max-width: 100% !important; }
     .view { display: none !important; }
     #tab-report { display: block !important; }
-    .report-wrap { box-shadow: none !important; border: 1px solid #ddd; }
-    .report-col { page-break-inside: avoid; }
-    .btn-primary { display: none !important; }
+    .report-wrap { box-shadow: none !important; border: none; }
+    .report-edit-controls { display: none !important; }
+    .report-edit-wrap { display: none !important; }
+    tr.report-highlight td { background: #fffde7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .print-only { display: block !important; }
+    #report-combined-table { width: 100%; font-size: 11px; }
+    #report-combined-table th { font-size: 11px; padding: 7px 8px; }
+    #report-combined-table td { font-size: 11px; padding: 7px 8px; }
   }
 
   @media (max-width: 600px) {
@@ -313,6 +318,7 @@
 
   /* ── 모바일 카드 ── */
   .m-cards { display: none; }
+  .print-only { display: none; }
   .m-group { margin-bottom: 10px; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
   .m-group-hd { background: var(--surface2); padding: 8px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; }
   .m-group-title { font-weight: 700; font-size: 13px; color: var(--text-primary); }
@@ -600,42 +606,37 @@
           </button>
         </div>
 
-        <!-- 지난주 편집 -->
+        <!-- 편집 패널 - 지난주 -->
         <div style="padding:16px 24px 0;">
-          <div style="font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-            <span style="display:inline-block;width:4px;height:16px;background:var(--text-secondary);border-radius:2px;"></span>
-            지난주 한 일
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+            <span style="display:inline-block;width:4px;height:14px;background:var(--text-secondary);border-radius:2px;"></span>
+            지난주 선택
             <span style="font-size:12px;font-weight:400;color:var(--text-muted);" id="report-last-label"></span>
           </div>
           <div class="report-edit-wrap no-print" id="edit-last"></div>
-          <div class="table-wrap" style="margin-bottom:0;">
-            <table>
-              <thead><tr>
-                <th style="width:32px;">#</th>
-                <th style="width:180px;">메인 업무</th>
-                <th>서브 업무</th>
-              </tr></thead>
-              <tbody id="tbody-report-last"></tbody>
-            </table>
-          </div>
         </div>
 
-        <!-- 이번주 편집 -->
-        <div style="padding:16px 24px 24px;">
-          <div style="font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-            <span style="display:inline-block;width:4px;height:16px;background:var(--accent);border-radius:2px;"></span>
-            이번주 진행 업무
+        <!-- 편집 패널 - 이번주 -->
+        <div style="padding:12px 24px 0;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+            <span style="display:inline-block;width:4px;height:14px;background:var(--accent);border-radius:2px;"></span>
+            이번주 선택
             <span style="font-size:12px;font-weight:400;color:var(--text-muted);" id="report-this-label"></span>
           </div>
           <div class="report-edit-wrap no-print" id="edit-this"></div>
+        </div>
+
+        <!-- 통합 테이블 (인쇄용) -->
+        <div style="padding:16px 24px 24px;" class="print-only">
           <div class="table-wrap" style="margin-bottom:0;">
-            <table>
+            <table id="report-combined-table">
               <thead><tr>
-                <th style="width:32px;">#</th>
-                <th style="width:180px;">메인 업무</th>
-                <th>서브 업무</th>
+                <th style="width:24px;">#</th>
+                <th style="width:140px;">메인 업무</th>
+                <th style="width:50%; border-right:2px solid var(--border2);">지난주 한 일</th>
+                <th style="width:50%;">이번주 진행 업무</th>
               </tr></thead>
-              <tbody id="tbody-report-this"></tbody>
+              <tbody id="tbody-report-combined"></tbody>
             </table>
           </div>
         </div>
@@ -1117,6 +1118,55 @@
     renderEditPanel(lastWeekTasks, 'edit-last', 'tbody-report-last', 'last');
     renderEditPanel(thisWeekTasks, 'edit-this', 'tbody-report-this', 'this');
     reportTasksCache = { last: lastWeekTasks, this: thisWeekTasks };
+
+    // 날짜 라벨 2번째 세트
+    const ll2 = document.getElementById('report-last-label2');
+    const tl2 = document.getElementById('report-this-label2');
+    if (ll2) ll2.textContent = `(${fmtDate(prevMon)} ~ ${fmtDate(prevSun)})`;
+    if (tl2) tl2.textContent = `(${fmtDate(currentMonday)} ~ ${fmtDate(getThisWeekSunday())})`;
+
+    renderCombinedReport(lastWeekTasks, thisWeekTasks);
+  }
+
+  function renderCombinedReport(lastTasks, thisTasks) {
+    const tbody = document.getElementById('tbody-report-combined');
+    if (!tbody) return;
+
+    // 지난주 + 이번주 메인 타이틀 합치기 (순서 유지)
+    const lastGroups = groupByMain(lastTasks);
+    const thisGroups = groupByMain(thisTasks);
+    const allTitles = [...new Set([...lastGroups.keys(), ...thisGroups.keys()])];
+
+    let html = '';
+    let num = 1;
+    allTitles.forEach(mainTitle => {
+      const lastSubs = lastGroups.get(mainTitle) || [];
+      const thisSubs = thisGroups.get(mainTitle) || [];
+
+      const lastLine = lastSubs.length
+        ? lastSubs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ')
+        : '<span style="color:var(--text-muted);">-</span>';
+      const thisLine = thisSubs.length
+        ? thisSubs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ')
+        : '<span style="color:var(--text-muted);">-</span>';
+
+      // 하이라이트 확인 (편집 패널에서)
+      const editLast = document.getElementById('edit-last');
+      const editThis = document.getElementById('edit-this');
+      const lastRow = editLast ? [...editLast.querySelectorAll('.report-edit-row')].find(r => r.dataset.key === mainTitle) : null;
+      const thisRow = editThis ? [...editThis.querySelectorAll('.report-edit-row')].find(r => r.dataset.key === mainTitle) : null;
+      const highlighted = (lastRow && lastRow.dataset.highlighted === 'true') || (thisRow && thisRow.dataset.highlighted === 'true');
+      const hlStyle = highlighted ? 'background:#fffde7;' : '';
+
+      html += `<tr class="${highlighted ? 'report-highlight' : ''}">
+        <td style="text-align:center;font-weight:700;color:var(--text-muted);vertical-align:top;padding:9px 8px;${hlStyle}">${num++}</td>
+        <td style="font-weight:700;font-size:13px;vertical-align:top;white-space:nowrap;padding:9px 8px;${hlStyle}">${mainTitle}</td>
+        <td style="vertical-align:top;padding:9px 8px;font-size:13px;line-height:1.6;border-right:2px solid var(--border2);${hlStyle}">${lastLine}</td>
+        <td style="vertical-align:top;padding:9px 8px;font-size:13px;line-height:1.6;${hlStyle}">${thisLine}</td>
+      </tr>`;
+    });
+
+    tbody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">등록된 업무가 없습니다</td></tr>`;
   }
 
   // ── 리포트 테이블 렌더 (전역) ──
@@ -1631,9 +1681,9 @@
   function printReport() {
     const btn = document.querySelector('.tab-btn.tab-report');
     if (btn) switchTab('report', btn);
-    // 출력 전 편집 패널 기준으로 테이블 강제 업데이트
     renderReportTableFromSettings('tbody-report-last', 'last');
     renderReportTableFromSettings('tbody-report-this', 'this');
+    renderCombinedReport(reportTasksCache.last || [], reportTasksCache.this || []);
     setTimeout(() => window.print(), 300);
   }
 
@@ -1644,25 +1694,24 @@
 
   // ── 샘플 데이터 ──
   const SAMPLE_TASKS = [
-    // 이번주 (2026-04-13 ~ 04-19) — 서비스 A 기획
-    { id:'T001', mainTitle:'서비스 A 기획', subTitle:'시장 조사',      member:'이서연',        status:'완료',    start:'2026-03-30', end:'2026-04-10', note:'보고서 제출 완료',   createdAt:'2026-03-30' },
-    { id:'T002', mainTitle:'서비스 A 기획', subTitle:'경쟁사 분석',    member:'박지호',        status:'완료',    start:'2026-04-06', end:'2026-04-14', note:'3개사 분석 완료',    createdAt:'2026-04-06' },
-    { id:'T003', mainTitle:'서비스 A 기획', subTitle:'기획서 작성',    member:'김민준 (팀장)', status:'진행 중', start:'2026-04-13', end:'2026-04-24', note:'초안 작성 중',       createdAt:'2026-04-13' },
-    { id:'T004', mainTitle:'서비스 A 기획', subTitle:'검토 및 승인',   member:'김민준 (팀장)', status:'예정',    start:'2026-04-20', end:'2026-04-30', note:'',                  createdAt:'2026-04-13' },
-    // 이번주 — 파트너사 미팅
-    { id:'T005', mainTitle:'파트너사 미팅', subTitle:'발표 자료 준비', member:'이서연',        status:'진행 중', start:'2026-04-13', end:'2026-04-17', note:'자료 80% 완성',      createdAt:'2026-04-13' },
-    { id:'T006', mainTitle:'파트너사 미팅', subTitle:'미팅 진행',      member:'김민준 (팀장)', status:'예정',    start:'2026-04-20', end:'2026-04-20', note:'오전 10시 예정',     createdAt:'2026-04-13' },
-    // 이번주 — DB 마이그레이션
-    { id:'T007', mainTitle:'DB 마이그레이션', subTitle:'인프라 검토',       member:'박지호', status:'완료',    start:'2026-04-06', end:'2026-04-10', note:'완료',               createdAt:'2026-04-06' },
-    { id:'T008', mainTitle:'DB 마이그레이션', subTitle:'마이그레이션 실행', member:'박지호', status:'진행 중', start:'2026-04-13', end:'2026-04-24', note:'1차 완료 목표',       createdAt:'2026-04-13' },
-    // 이번주 — Q2 OKR
-    { id:'T009', mainTitle:'Q2 OKR', subTitle:'초안 작성',      member:'김민준 (팀장)', status:'진행 중', start:'2026-04-13', end:'2026-04-17', note:'전략팀 공유 예정',   createdAt:'2026-04-13' },
-    { id:'T010', mainTitle:'Q2 OKR', subTitle:'팀 공유 및 확정', member:'이서연',        status:'예정',    start:'2026-04-20', end:'2026-04-24', note:'',                  createdAt:'2026-04-13' },
-    // 다음주 (2026-04-20 ~ 04-26) 전용 업무
-    { id:'T011', mainTitle:'월간 보고서',    subTitle:'데이터 수집',    member:'이서연',        status:'예정',    start:'2026-04-20', end:'2026-04-22', note:'',                  createdAt:'2026-04-13' },
-    { id:'T012', mainTitle:'월간 보고서',    subTitle:'보고서 작성',    member:'김민준 (팀장)', status:'예정',    start:'2026-04-22', end:'2026-04-25', note:'팀장 최종 검토',     createdAt:'2026-04-13' },
-    { id:'T013', mainTitle:'신규 기능 QA',   subTitle:'테스트 시나리오 작성', member:'박지호', status:'예정',    start:'2026-04-20', end:'2026-04-21', note:'',                  createdAt:'2026-04-13' },
-    { id:'T014', mainTitle:'신규 기능 QA',   subTitle:'QA 테스트 실행',       member:'박지호', status:'예정',    start:'2026-04-22', end:'2026-04-26', note:'',                  createdAt:'2026-04-13' },
+    // 지난주 완료 업무 (2026-05-11 ~ 05-17)
+    { id:'T001', mainTitle:'AI_매출속보(커머스)', subTitle:'산출데이터 화면 구상', member:'김민준 (팀장)', status:'완료', start:'2026-05-11', end:'2026-05-14', note:'완료', createdAt:'2026-05-11' },
+    { id:'T002', mainTitle:'AI_매출속보(커머스)', subTitle:'반품 로직 추가', member:'김민준 (팀장)', status:'완료', start:'2026-05-12', end:'2026-05-15', note:'완료', createdAt:'2026-05-11' },
+    { id:'T003', mainTitle:'AI_매출속보(커머스)', subTitle:'추가 데이터 검토', member:'김민준 (팀장)', status:'진행 중', start:'2026-05-15', end:'2026-05-22', note:'1차 완료 목표', createdAt:'2026-05-15' },
+    { id:'T004', mainTitle:'26년 포상', subTitle:'포상 기획안 보고', member:'이서연', status:'완료', start:'2026-05-11', end:'2026-05-13', note:'완료', createdAt:'2026-05-11' },
+    { id:'T005', mainTitle:'26년 포상', subTitle:'1Q 포상 수상자 선정', member:'이서연', status:'진행 중', start:'2026-05-14', end:'2026-05-21', note:'진행 중', createdAt:'2026-05-14' },
+    { id:'T006', mainTitle:'KPI 관리', subTitle:'2026년 KPI 목표 입력', member:'박지호', status:'완료', start:'2026-05-11', end:'2026-05-12', note:'완료', createdAt:'2026-05-11' },
+    { id:'T007', mainTitle:'KPI 관리', subTitle:'B4B커머셜팀 GTM 수정', member:'박지호', status:'완료', start:'2026-05-13', end:'2026-05-16', note:'완료', createdAt:'2026-05-13' },
+    { id:'T008', mainTitle:'KPI 관리', subTitle:'다인 KPI 확정 및 실적 조정', member:'박지호', status:'진행 중', start:'2026-05-16', end:'2026-05-23', note:'진행 중', createdAt:'2026-05-16' },
+    { id:'T009', mainTitle:'26년 신규입사자 교육', subTitle:'CRM 파트 교육', member:'이서연', status:'완료', start:'2026-05-12', end:'2026-05-14', note:'완료', createdAt:'2026-05-12' },
+    { id:'T010', mainTitle:'26년 신규입사자 교육', subTitle:'2Q 교육안 업데이트', member:'이서연', status:'진행 중', start:'2026-05-15', end:'2026-05-20', note:'진행 중', createdAt:'2026-05-15' },
+    // 이번주 신규 업무 (2026-05-18 ~ 05-24)
+    { id:'T011', mainTitle:'월간 보고서', subTitle:'데이터 수집', member:'이서연', status:'진행 중', start:'2026-05-18', end:'2026-05-20', note:'', createdAt:'2026-05-18' },
+    { id:'T012', mainTitle:'월간 보고서', subTitle:'보고서 작성', member:'김민준 (팀장)', status:'예정', start:'2026-05-20', end:'2026-05-22', note:'팀장 최종 검토', createdAt:'2026-05-18' },
+    { id:'T013', mainTitle:'신규 기능 QA', subTitle:'테스트 시나리오 작성', member:'박지호', status:'진행 중', start:'2026-05-18', end:'2026-05-19', note:'', createdAt:'2026-05-18' },
+    { id:'T014', mainTitle:'신규 기능 QA', subTitle:'QA 테스트 실행', member:'박지호', status:'예정', start:'2026-05-20', end:'2026-05-23', note:'', createdAt:'2026-05-18' },
+    { id:'T015', mainTitle:'파트너사 미팅', subTitle:'발표 자료 준비', member:'이서연', status:'진행 중', start:'2026-05-18', end:'2026-05-20', note:'자료 80% 완성', createdAt:'2026-05-18' },
+    { id:'T016', mainTitle:'파트너사 미팅', subTitle:'미팅 진행', member:'김민준 (팀장)', status:'예정', start:'2026-05-21', end:'2026-05-21', note:'오전 10시 예정', createdAt:'2026-05-18' },
   ];
 
   // ── 세로/가로 감지 ──
