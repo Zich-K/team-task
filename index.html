@@ -312,6 +312,9 @@
     .report-wrap { padding-top: 0 !important; }
     .report-header { padding: 8px 16px !important; }
     #report-combined-table tbody tr { page-break-inside: avoid; }
+    #report-combined-table thead { display: table-header-group; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .report-header { page-break-after: avoid; }
+    .report-metrics-wrap { page-break-after: avoid; }
     #report-combined-table { width: 100%; table-layout: fixed; font-size: 10px; }
     #report-combined-table thead tr th { background: #3d3d3b !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     #report-combined-table thead { display: table-header-group; }
@@ -1704,7 +1707,35 @@
     renderReportTableFromSettings('tbody-report-last', 'last');
     renderReportTableFromSettings('tbody-report-this', 'this');
     renderCombinedReport(reportTasksCache.last || [], reportTasksCache.this || []);
-    setTimeout(() => window.print(), 300);
+    // 인쇄 전 tbody 내 일정 행마다 헤더 행 삽입 (10행마다)
+    setTimeout(() => {
+      const tbody = document.getElementById('tbody-report-combined');
+      const thead = document.querySelector('#report-combined-table thead tr');
+      if (tbody && thead) {
+        const rows = [...tbody.querySelectorAll('tr')];
+        const repeatEvery = 10;
+        rows.forEach((row, i) => {
+          if (i > 0 && i % repeatEvery === 0) {
+            const clone = thead.cloneNode(true);
+            clone.style.background = '#3d3d3b';
+            clone.querySelectorAll('th').forEach(th => {
+              th.style.background = '#3d3d3b';
+              th.style.color = '#fff';
+            });
+            const tr = document.createElement('tr');
+            tr.appendChild(clone);
+            tbody.insertBefore(clone, row);
+          }
+        });
+      }
+      window.print();
+      // 인쇄 후 복제 행 제거
+      setTimeout(() => {
+        if (tbody) {
+          tbody.querySelectorAll('tr.repeat-header').forEach(r => r.remove());
+        }
+      }, 1000);
+    }, 300);
   }
 
   // ── 구글 시트 ──
