@@ -294,7 +294,7 @@
 
   /* ── 프린트 ── */
   @media print {
-    @page { size: A4 landscape; margin: 12mm; }
+    @page { size: A4 landscape; margin: 10mm; }
     .header, .tabs-wrap, .no-print { display: none !important; }
     .main { padding: 0 !important; max-width: 100% !important; }
     .view { display: none !important; }
@@ -304,9 +304,18 @@
     .report-edit-wrap { display: none !important; }
     tr.report-highlight td { background: #fffde7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .print-only { display: block !important; }
-    #report-combined-table { width: 100%; font-size: 11px; }
-    #report-combined-table th { font-size: 11px; padding: 7px 8px; }
-    #report-combined-table td { font-size: 11px; padding: 7px 8px; }
+    .metric-value { font-size: 18px !important; }
+    .metric-label, .metric-sub { font-size: 10px !important; }
+    .metric-card { padding: 8px 10px !important; }
+    .report-title { font-size: 15px !important; }
+    .report-subtitle { font-size: 11px !important; }
+    #report-combined-table { width: 100%; table-layout: fixed; font-size: 10px; }
+    #report-combined-table th { font-size: 10px; padding: 5px 6px; }
+    #report-combined-table td { font-size: 10px; padding: 5px 6px; word-break: keep-all; word-wrap: break-word; line-height: 1.5; }
+    #report-combined-table colgroup col:nth-child(1) { width: 22px; }
+    #report-combined-table colgroup col:nth-child(2) { width: 110px; }
+    #report-combined-table colgroup col:nth-child(3) { width: auto; }
+    #report-combined-table colgroup col:nth-child(4) { width: auto; }
   }
 
   @media (max-width: 600px) {
@@ -608,7 +617,7 @@
 
         <!-- 편집 패널 - 지난주 -->
         <div style="padding:16px 24px 0;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;" class="no-print">
             <span style="display:inline-block;width:4px;height:14px;background:var(--text-secondary);border-radius:2px;"></span>
             지난주 선택
             <span style="font-size:12px;font-weight:400;color:var(--text-muted);" id="report-last-label"></span>
@@ -618,7 +627,7 @@
 
         <!-- 편집 패널 - 이번주 -->
         <div style="padding:12px 24px 0;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;" class="no-print">
             <span style="display:inline-block;width:4px;height:14px;background:var(--accent);border-radius:2px;"></span>
             이번주 선택
             <span style="font-size:12px;font-weight:400;color:var(--text-muted);" id="report-this-label"></span>
@@ -630,10 +639,16 @@
         <div style="padding:16px 24px 24px;" class="print-only">
           <div class="table-wrap" style="margin-bottom:0;">
             <table id="report-combined-table">
+              <colgroup>
+                <col style="width:22px;">
+                <col style="width:110px;">
+                <col>
+                <col>
+              </colgroup>
               <thead><tr>
-                <th style="width:24px;">#</th>
-                <th style="width:140px;">메인 업무</th>
-                <th style="width:50%; border-right:2px solid var(--border2);">지난주 한 일</th>
+                <th style="width:24px;border-right:2px solid var(--border2);">#</th>
+                <th style="width:140px;border-right:2px solid var(--border2);">메인 업무</th>
+                <th style="width:50%;border-right:2px solid var(--border2);">지난주 한 일</th>
                 <th style="width:50%;">이번주 진행 업무</th>
               </tr></thead>
               <tbody id="tbody-report-combined"></tbody>
@@ -1159,8 +1174,8 @@
       const hlStyle = highlighted ? 'background:#fffde7;' : '';
 
       html += `<tr class="${highlighted ? 'report-highlight' : ''}">
-        <td style="text-align:center;font-weight:700;color:var(--text-muted);vertical-align:top;padding:9px 8px;${hlStyle}">${num++}</td>
-        <td style="font-weight:700;font-size:13px;vertical-align:top;white-space:nowrap;padding:9px 8px;${hlStyle}">${mainTitle}</td>
+        <td style="text-align:center;font-weight:700;color:var(--text-muted);vertical-align:top;padding:9px 8px;border-right:2px solid var(--border2);${hlStyle}">${num++}</td>
+        <td style="font-weight:700;font-size:13px;vertical-align:top;white-space:nowrap;padding:9px 8px;border-right:2px solid var(--border2);${hlStyle}">${mainTitle}</td>
         <td style="vertical-align:top;padding:9px 8px;font-size:13px;line-height:1.6;border-right:2px solid var(--border2);${hlStyle}">${lastLine}</td>
         <td style="vertical-align:top;padding:9px 8px;font-size:13px;line-height:1.6;${hlStyle}">${thisLine}</td>
       </tr>`;
