@@ -310,7 +310,7 @@
     .report-title { font-size: 15px !important; }
     .report-subtitle { font-size: 11px !important; }
     #report-combined-table { width: 100%; table-layout: fixed; font-size: 10px; }
-    #report-combined-table th { font-size: 10px; padding: 5px 6px; }
+    #report-combined-table thead tr th { background: #3d3d3b !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     #report-combined-table td { font-size: 10px; padding: 5px 6px; word-break: keep-all; word-wrap: break-word; line-height: 1.5; }
     #report-combined-table colgroup col:nth-child(1) { width: 22px; }
     #report-combined-table colgroup col:nth-child(2) { width: 110px; }
@@ -645,11 +645,11 @@
                 <col>
                 <col>
               </colgroup>
-              <thead><tr>
-                <th style="width:24px;border-right:2px solid var(--border2);">#</th>
-                <th style="width:140px;border-right:2px solid var(--border2);">메인 업무</th>
-                <th style="width:50%;border-right:2px solid var(--border2);">지난주 한 일</th>
-                <th style="width:50%;">이번주 진행 업무</th>
+              <thead><tr style="background:#3d3d3b;">
+                <th style="width:24px;border-right:2px solid #555;color:#fff;background:#3d3d3b;">#</th>
+                <th style="width:140px;border-right:2px solid #555;color:#fff;background:#3d3d3b;">메인 업무</th>
+                <th style="width:50%;border-right:2px solid #555;color:#fff;background:#3d3d3b;">지난주 한 일</th>
+                <th style="width:50%;color:#fff;background:#3d3d3b;">이번주 진행 업무</th>
               </tr></thead>
               <tbody id="tbody-report-combined"></tbody>
             </table>
@@ -1175,7 +1175,7 @@
 
       html += `<tr class="${highlighted ? 'report-highlight' : ''}">
         <td style="text-align:center;font-weight:700;color:var(--text-muted);vertical-align:top;padding:9px 8px;border-right:2px solid var(--border2);${hlStyle}">${num++}</td>
-        <td style="font-weight:700;font-size:13px;vertical-align:top;white-space:nowrap;padding:9px 8px;border-right:2px solid var(--border2);${hlStyle}">${mainTitle}</td>
+        <td style="font-weight:700;font-size:13px;vertical-align:top;padding:9px 8px;border-right:2px solid var(--border2);${hlStyle}">${mainTitle}</td>
         <td style="vertical-align:top;padding:9px 8px;font-size:13px;line-height:1.6;border-right:2px solid var(--border2);${hlStyle}">${lastLine}</td>
         <td style="vertical-align:top;padding:9px 8px;font-size:13px;line-height:1.6;${hlStyle}">${thisLine}</td>
       </tr>`;
