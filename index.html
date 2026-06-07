@@ -202,13 +202,13 @@
   .cal-head-cell { padding:8px 0; text-align:center; font-size:11px; font-weight:600; color:var(--text-secondary); border-right:0.5px solid var(--border); }
   .cal-head-cell:last-child { border-right:none; }
   .cal-body { display:grid; grid-template-columns:repeat(7,1fr); }
-  .cal-cell { min-height:90px; border-right:0.5px solid var(--border); border-bottom:0.5px solid var(--border); padding:4px; background:var(--surface); }
+  .cal-cell { height:120px; border-right:0.5px solid var(--border); border-bottom:0.5px solid var(--border); padding:4px; background:var(--surface); overflow:hidden; vertical-align:top; }
   .cal-cell:nth-child(7n) { border-right:none; }
   .cal-cell.other { background:var(--surface2); opacity:0.6; }
   .cal-cell.today-cell { background:#f0faf0; }
   .cal-date { font-size:11px; font-weight:600; color:var(--text-secondary); margin-bottom:2px; width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:50%; }
   .today-cell .cal-date { background:var(--accent); color:#fff; }
-  .cal-event { font-size:10px; padding:2px 5px; border-radius:3px; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+  .cal-event { font-size:10px; padding:2px 5px; border-radius:3px; margin-bottom:2px; overflow:hidden; white-space:normal; word-break:keep-all; cursor:pointer; line-height:1.4; }
   .cal-event:hover { opacity:0.8; }
   .ev-meeting { background:#e8eef7; color:#1a3f6b; }
   .ev-task { background:#eaf3e8; color:#2d5a27; }
@@ -1155,16 +1155,36 @@
     const tbody = document.getElementById('tbody-report-combined');
     if (!tbody) return;
 
-    // 지난주 + 이번주 메인 타이틀 합치기 (순서 유지)
+    const editLast = document.getElementById('edit-last');
+    const editThis = document.getElementById('edit-this');
+
+    // 편집 패널 순서 기준으로 렌더 (체크된 것만)
+    const lastRows = editLast ? [...editLast.querySelectorAll('.report-edit-row')] : [];
+    const thisRows = editThis ? [...editThis.querySelectorAll('.report-edit-row')] : [];
+
+    // 체크된 타이틀만 추출 (순서 유지)
+    const checkedLast = new Set(lastRows.filter(r => r.querySelector('.report-check').checked).map(r => r.dataset.key));
+    const checkedThis = new Set(thisRows.filter(r => r.querySelector('.report-check').checked).map(r => r.dataset.key));
+
+    // 지난주/이번주 순서 합치기 (중복 제거, 순서 유지)
+    const allTitles = [];
+    const seen = new Set();
+    [...lastRows, ...thisRows].forEach(r => {
+      const key = r.dataset.key;
+      if (!seen.has(key) && (checkedLast.has(key) || checkedThis.has(key))) {
+        seen.add(key);
+        allTitles.push(key);
+      }
+    });
+
     const lastGroups = groupByMain(lastTasks);
     const thisGroups = groupByMain(thisTasks);
-    const allTitles = [...new Set([...lastGroups.keys(), ...thisGroups.keys()])];
 
     let html = '';
     let num = 1;
     allTitles.forEach(mainTitle => {
-      const lastSubs = lastGroups.get(mainTitle) || [];
-      const thisSubs = thisGroups.get(mainTitle) || [];
+      const lastSubs = checkedLast.has(mainTitle) ? (lastGroups.get(mainTitle) || []) : [];
+      const thisSubs = checkedThis.has(mainTitle) ? (thisGroups.get(mainTitle) || []) : [];
 
       const lastLine = lastSubs.length
         ? lastSubs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ')
@@ -1173,11 +1193,9 @@
         ? thisSubs.map(s => `${s.subTitle||s.title||''}(${s.status})`).join(', ')
         : '<span style="color:var(--text-muted);">-</span>';
 
-      // 하이라이트 확인 (편집 패널에서)
-      const editLast = document.getElementById('edit-last');
-      const editThis = document.getElementById('edit-this');
-      const lastRow = editLast ? [...editLast.querySelectorAll('.report-edit-row')].find(r => r.dataset.key === mainTitle) : null;
-      const thisRow = editThis ? [...editThis.querySelectorAll('.report-edit-row')].find(r => r.dataset.key === mainTitle) : null;
+      // 하이라이트 확인
+      const lastRow = lastRows.find(r => r.dataset.key === mainTitle);
+      const thisRow = thisRows.find(r => r.dataset.key === mainTitle);
       const highlighted = (lastRow && lastRow.dataset.highlighted === 'true') || (thisRow && thisRow.dataset.highlighted === 'true');
       const hlStyle = highlighted ? 'background:#fffde7;' : '';
 
@@ -1839,12 +1857,28 @@
     return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   }
 
+  function getMemberColor(memberName) {
+    if (!memberName) return { bg:'#eaf3e8', text:'#2d5a27' };
+    const user = ALL_USERS.find(u => memberName.includes(u.name));
+    if (!user) return { bg:'#eaf3e8', text:'#2d5a27' };
+    const colorMap = {
+      purple: { bg:'#f0ecfc', text:'#4a2d8a' },
+      blue:   { bg:'#e8eef7', text:'#1a3f6b' },
+      green:  { bg:'#eaf3e8', text:'#2d5a27' },
+      amber:  { bg:'#fdf3e3', text:'#7a4a10' },
+      pink:   { bg:'#fce4ec', text:'#880e4f' },
+      teal:   { bg:'#e1f5ee', text:'#0f6e56' },
+    };
+    return colorMap[user.color] || { bg:'#eaf3e8', text:'#2d5a27' };
+  }
+
   function getCalEvents(dateStr) {
     const events = [];
     // 업무 마감일
     ALL_TASKS.forEach(t => {
       if (t.end && t.end.slice(0,10) === dateStr) {
-        events.push({ type:'task', title: (t.subTitle||t.mainTitle||''), who: t.member });
+        const color = getMemberColor(t.member);
+        events.push({ type:'task', title: (t.subTitle||t.mainTitle||''), who: t.member, memberBg: color.bg, memberText: color.text });
       }
     });
     // 직접 입력 일정
@@ -1874,7 +1908,10 @@
       const maxShow = 2;
       html += `<div class="cal-cell${other?' other':''}${isToday?' today-cell':''}">
         <div class="cal-date">${d}</div>
-        ${evs.slice(0, maxShow).map((e,idx) => `<div class="cal-event ev-${e.type}" onclick="showCalDetail(event, '${dateStr}', ${idx})">${e.time?e.time+' ':''}${e.title}</div>`).join('')}
+        ${evs.slice(0, maxShow).map((e,idx) => {
+        const style = e.type==='task' && e.memberBg ? `background:${e.memberBg};color:${e.memberText};` : '';
+        return `<div class="cal-event ev-${e.type}" style="${style}" onclick="showCalDetail(event, '${dateStr}', ${idx})">${e.time?e.time+' ':''}${e.title}</div>`;
+      }).join('')}
         ${evs.length > maxShow ? `<div style="font-size:10px;color:var(--text-muted);padding:1px 4px;cursor:pointer;" onclick="showCalDayPopup(event, '${dateStr}')">+${evs.length-maxShow}개 더보기</div>` : ''}
       </div>`;
     }
