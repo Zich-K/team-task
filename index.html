@@ -75,6 +75,8 @@
   tr.row-new td { background: var(--new); }
   tr.row-modified td { background: var(--modified); }
   tr.row-done td { opacity: var(--done-opacity); background: var(--surface2); }
+  tr.row-done td.actions-cell { opacity: 1; background: transparent; }
+  tr.row-done td.actions-cell .btn { opacity: 0.6; }
   tr.main-row td.main-cell,
   td.main-cell { opacity: 1 !important; background: var(--surface2) !important; color: var(--text-primary) !important; font-weight: 600 !important; vertical-align: top !important; padding: 8px 10px !important; }
   .group-start td { border-top: 2px solid var(--border2) !important; }
@@ -957,7 +959,7 @@
             <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">${fmtYM(task.start)}</td>
             <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">${fmtYM(task.end)}</td>
             <td style="font-size:12px;color:var(--text-secondary);">${task.note||''}</td>
-            <td style="display:flex;gap:4px;">${editBtn(task)}${deleteBtn(task)}</td>
+            <td class="actions-cell" style="display:flex;gap:4px;">${editBtn(task)}${deleteBtn(task)}</td>
           </tr>`;
         } else if (cols === 'team-this') {
           html += `<tr class="${rc} ${rd}">
@@ -981,7 +983,7 @@
             <td style="font-weight:600;">${task.subTitle||''}</td>
             <td>${statusBadge(task.status)}</td>
             <td style="font-size:12px;color:var(--text-secondary);">${task.note||''}</td>
-            <td style="display:flex;gap:4px;">${editBtn(task)}${deleteBtn(task)}</td>
+            <td class="actions-cell" style="display:flex;gap:4px;">${editBtn(task)}${deleteBtn(task)}</td>
           </tr>`;
         }
       });
@@ -1098,7 +1100,7 @@
           <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">${fmtYM(task.start)}</td>
           <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">${fmtYM(task.end)}</td>
           <td style="font-size:12px;color:var(--text-secondary);">${task.note||''}</td>
-          <td style="display:flex;gap:4px;">${editBtn(task)}${deleteBtn(task)}</td>
+          <td class="actions-cell" style="display:flex;gap:4px;">${editBtn(task)}${deleteBtn(task)}</td>
         </tr>`;
       });
     });
