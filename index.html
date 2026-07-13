@@ -959,7 +959,7 @@
             <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">${fmtYM(task.start)}</td>
             <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">${fmtYM(task.end)}</td>
             <td style="font-size:12px;color:var(--text-secondary);">${task.note||''}</td>
-            <td class="actions-cell" style="display:flex;gap:4px;">${editBtn(task)}${deleteBtn(task)}</td>
+            <td class="actions-cell"><div style="display:flex;gap:4px;align-items:center;">${editBtn(task)}${deleteBtn(task)}</div></td>
           </tr>`;
         } else if (cols === 'team-this') {
           html += `<tr class="${rc} ${rd}">
@@ -983,7 +983,7 @@
             <td style="font-weight:600;">${task.subTitle||''}</td>
             <td>${statusBadge(task.status)}</td>
             <td style="font-size:12px;color:var(--text-secondary);">${task.note||''}</td>
-            <td class="actions-cell" style="display:flex;gap:4px;">${editBtn(task)}${deleteBtn(task)}</td>
+            <td class="actions-cell"><div style="display:flex;gap:4px;align-items:center;">${editBtn(task)}${deleteBtn(task)}</div></td>
           </tr>`;
         }
       });
@@ -1100,7 +1100,7 @@
           <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">${fmtYM(task.start)}</td>
           <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">${fmtYM(task.end)}</td>
           <td style="font-size:12px;color:var(--text-secondary);">${task.note||''}</td>
-          <td class="actions-cell" style="display:flex;gap:4px;">${editBtn(task)}${deleteBtn(task)}</td>
+          <td class="actions-cell"><div style="display:flex;gap:4px;align-items:center;">${editBtn(task)}${deleteBtn(task)}</div></td>
         </tr>`;
       });
     });
