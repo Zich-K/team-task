@@ -107,13 +107,17 @@
   .briefing-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .briefing-header-title { font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
   .briefing-table { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-  .briefing-row { display: grid; grid-template-columns: 320px repeat(7, 1fr); align-items: stretch; min-height: 44px; border-top: 1px solid var(--border); }
+  .briefing-row { display: grid; grid-template-columns: 384px repeat(7, 1fr); align-items: stretch; min-height: 44px; border-top: 1px solid var(--border); }
   .briefing-row:first-child { border-top: none; }
   .briefing-head { background: var(--surface2); font-size: 12px; color: var(--text-secondary); }
   .briefing-head-cell { text-align: center; padding: 8px 4px; }
   .briefing-head-cell .dow { font-size: 11px; color: var(--text-muted); }
   .briefing-head-cell.today { background: var(--danger-light); border-radius: 4px; }
   .briefing-head-cell.today .date, .briefing-head-cell.today .dow { color: var(--danger); font-weight: 700; }
+  .briefing-head-cell.overdue-col { background: var(--danger-light); border-radius: 4px; }
+  .briefing-head-cell.overdue-col .date { color: var(--danger); font-weight: 700; }
+  .briefing-head-cell.upcoming-col { background: var(--info-light); border-radius: 4px; }
+  .briefing-head-cell.upcoming-col .date { color: var(--info); font-weight: 700; }
   .briefing-task-cell { padding: 6px 12px; display: flex; align-items: center; gap: 8px; min-width: 0; }
   .briefing-task-title { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   .briefing-task-title:hover { text-decoration: underline; }
@@ -129,14 +133,12 @@
   .briefing-block.overdue { background: var(--danger); }
   .briefing-block.active { background: var(--info); }
   .briefing-block.done { background: var(--border2); }
-  .briefing-block .memo-mark { position: absolute; top: 2px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.85); }
-  .briefing-block .memo-watermark {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    padding: 2px; font-size: 9px; line-height: 1.2; color: #fff; text-align: center;
-    overflow: hidden; opacity: 0; pointer-events: none; transition: opacity .12s ease;
-    background: rgba(0,0,0,0.35);
+  .briefing-block .memo-mark {
+    position: absolute; top: 3px; right: 3px; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 9px; line-height: 1; color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,.4);
   }
-  .briefing-block:hover .memo-watermark { opacity: 1; }
   .briefing-empty { padding: 30px; text-align: center; color: var(--text-muted); font-size: 13px; }
 
   /* 블록 메모 편집 팝업 */
@@ -148,6 +150,15 @@
     width: 240px;
   }
   .block-memo-popup.show { display: block; }
+
+  /* 블록 메모 호버 미리보기 팝업 (읽기 전용, 클릭 불가) */
+  .memo-preview-popup {
+    display: none; position: fixed; z-index: 2050; pointer-events: none;
+    background: rgba(26,26,24,0.92); color: #fff; font-size: 12px; line-height: 1.4;
+    border-radius: 8px; padding: 8px 12px; max-width: 220px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2); white-space: pre-wrap; word-break: break-word;
+  }
+  .memo-preview-popup.show { display: block; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); }
   .legend-dot { width: 12px; height: 12px; border-radius: 3px; border: 1px solid; }
   .legend-long { background: var(--long); border-color: var(--long-border); }
@@ -784,6 +795,8 @@
   </div>
 </div>
 
+<div class="memo-preview-popup" id="memo-preview-popup"></div>
+
 <script>
   const API_URL = 'https://script.google.com/macros/s/AKfycbx0b6m1WQbicHgmAnEhT6504yTXZAc2K_3zelPs6XqxIRXr7kHVviBy-BGhIUu6sQSczg/exec';
   const SPREADSHEET_ID = '';
@@ -1108,11 +1121,12 @@
     if (!grid) return;
 
     const selMember = document.getElementById('briefing-member').value || '전체';
-    const weekDays = [];
-    for (let i = 0; i < 7; i++) {
+    // 평일(월~금) 5일만 날짜 칼럼으로 사용, 앞뒤로 지연/예정 칼럼 추가 (총 7칸)
+    const weekdays = [];
+    for (let i = 0; i < 5; i++) {
       const d = new Date(currentMonday);
       d.setDate(d.getDate() + i);
-      weekDays.push(d);
+      weekdays.push(d);
     }
     const today = new Date(); today.setHours(0,0,0,0);
     const oneDay = 24*60*60*1000;
@@ -1124,17 +1138,25 @@
       if (!endDate || isNaN(endDate)) return false;
       const isDone = t.status === '완료';
       const dayIdx = Math.round((endDate - currentMonday) / oneDay);
-      if (isDone) return dayIdx >= 0 && dayIdx <= 6;
-      return true; // 미완료는 지연 포함 전부 표시
+      if (isDone) return dayIdx >= 0 && dayIdx <= 6; // 완료 업무는 이번주에 마감된 것만 표시
+      return true; // 미완료는 지연/예정 포함 전부 표시
     });
 
     tasks.sort((a, b) => {
-      const pa = parseInt(a.priority) || 2, pb = parseInt(b.priority) || 2;
-      if (pa !== pb) return pa - pb;
+      const doneA = a.status === '완료' ? 1 : 0, doneB = b.status === '완료' ? 1 : 0;
+      if (doneA !== doneB) return doneA - doneB; // 완료 항목은 항상 맨 아래
+      if (!doneA) {
+        const pa = parseInt(a.priority) || 2, pb = parseInt(b.priority) || 2;
+        if (pa !== pb) return pa - pb;
+      }
       return (parseDate(a.end) || 0) - (parseDate(b.end) || 0);
     });
 
-    const headCells = weekDays.map(d => {
+    // 칼럼 정의: [지연, 월,화,수,목,금, 예정]
+    const headCells = ['지연', ...weekdays.map(d => null), '예정'].map((label, i) => {
+      if (label === '지연') return `<div class="briefing-head-cell overdue-col"><div class="date">지연</div></div>`;
+      if (label === '예정') return `<div class="briefing-head-cell upcoming-col"><div class="date">예정</div></div>`;
+      const d = weekdays[i - 1];
       const isToday = d.getTime() === today.getTime();
       return `<div class="briefing-head-cell${isToday ? ' today' : ''}">
         <div class="date">${fmtDate(d)}</div>
@@ -1151,22 +1173,32 @@
       return;
     }
 
+    // dayIdx: 0=지연, 1~5=월~금, 6=예정
+    function colIndexFor(endDate) {
+      const diff = Math.round((endDate - currentMonday) / oneDay);
+      if (diff < 0) return 0;
+      if (diff <= 4) return diff + 1;
+      return 6;
+    }
+
     const rows = tasks.map(t => {
       const isDone = t.status === '완료';
       const endDate = parseDate(t.end);
       const isOverdue = !isDone && endDate < today;
       const p = isDone ? '0' : (t.priority || '2');
       const badgeLabel = { '1':'①', '2':'②', '3':'③', '0':'-' }[p] || '②';
-      const dayIdx = Math.min(6, Math.max(0, Math.round((endDate - currentMonday) / oneDay)));
+      const col = colIndexFor(endDate);
       const badgeClick = isDone ? '' : ` onclick="event.stopPropagation();cycleBriefingPriority('${t.id}')"`;
+      const memo = (t.blockNote || '').trim();
+      const memoMark = memo ? '<div class="memo-mark">✎</div>' : '';
 
-      const blocks = weekDays.map((d, i) => {
-        if (i !== dayIdx) return '<div></div>';
+      const blocks = Array.from({length: 7}, (_, i) => {
+        if (i !== col) return '<div></div>';
         const blockClass = isDone ? 'done' : (isOverdue ? 'overdue' : 'active');
-        const memo = (t.blockNote || '').trim();
-        const memoMark = memo ? '<div class="memo-mark"></div>' : '';
-        const watermark = memo ? `<div class="memo-watermark">${escapeHtml(memo)}</div>` : '';
-        return `<div class="briefing-block-cell"><div class="briefing-block ${blockClass}" onclick="openBlockMemo('${t.id}', event)">${memoMark}${watermark}</div></div>`;
+        const hoverAttrs = memo
+          ? ` onmouseenter="showMemoPreview(event,'${t.id}')" onmousemove="moveMemoPreview(event)" onmouseleave="hideMemoPreview()"`
+          : '';
+        return `<div class="briefing-block-cell"><div class="briefing-block ${blockClass}" onclick="openBlockMemo('${t.id}', event)"${hoverAttrs}>${memoMark}</div></div>`;
       }).join('');
 
       return `<div class="briefing-row">
@@ -1203,10 +1235,39 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  // ── 블록 메모 호버 미리보기 (읽기 전용) ──
+  function positionFollowingPopup(popup, evt, w, h) {
+    const margin = 10;
+    let left = evt.clientX + 14;
+    let top = evt.clientY + 14;
+    if (left + w + margin > window.innerWidth) left = evt.clientX - w - 14;
+    if (top + h + margin > window.innerHeight) top = evt.clientY - h - 14;
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+  }
+  function showMemoPreview(evt, taskId) {
+    const task = ALL_TASKS.find(t => t.id === taskId);
+    const memo = task && (task.blockNote || '').trim();
+    if (!memo) return;
+    const popup = document.getElementById('memo-preview-popup');
+    popup.textContent = memo;
+    popup.classList.add('show');
+    positionFollowingPopup(popup, evt, 220, 60);
+  }
+  function moveMemoPreview(evt) {
+    const popup = document.getElementById('memo-preview-popup');
+    if (!popup.classList.contains('show')) return;
+    positionFollowingPopup(popup, evt, 220, 60);
+  }
+  function hideMemoPreview() {
+    document.getElementById('memo-preview-popup').classList.remove('show');
+  }
+
   // ── 블록 메모 편집 ──
   let blockMemoTaskId = null;
   function openBlockMemo(taskId, evt) {
     evt.stopPropagation();
+    hideMemoPreview();
     const task = ALL_TASKS.find(t => t.id === taskId);
     if (!task) return;
     blockMemoTaskId = taskId;
