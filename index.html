@@ -141,6 +141,25 @@
   }
   .briefing-empty { padding: 30px; text-align: center; color: var(--text-muted); font-size: 13px; }
 
+  /* 위클리 브리핑 모바일 카드뷰 (세로모드) */
+  .briefing-mobile-cards { display: none; flex-direction: column; gap: 8px; }
+  body.portrait .briefing-table { display: none !important; }
+  body.portrait .briefing-mobile-cards { display: flex !important; }
+  .briefing-mcard { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--surface); }
+  .briefing-mcard-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .briefing-mcard-title { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  .briefing-mcard-title.done { color: var(--text-secondary); }
+  .briefing-mcard-tag { position: relative; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; flex-shrink: 0; cursor: pointer; white-space: nowrap; }
+  .briefing-mcard-tag.overdue { background: var(--danger-light); color: var(--danger); }
+  .briefing-mcard-tag.active { background: var(--info-light); color: var(--info); }
+  .briefing-mcard-tag.done { background: var(--surface2); color: var(--text-muted); }
+  .briefing-mcard-tag .memo-mark {
+    position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 9px; line-height: 1; color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,.4);
+  }
+
   /* 블록 메모 편집 팝업 */
   .block-memo-popup {
     display: none; position: fixed; z-index: 2100;
@@ -466,7 +485,6 @@
       <button class="tab-btn active" data-tab="dashboard">대시보드</button>
       <div id="member-tabs"></div>
       <button class="tab-btn" data-tab="team">팀 합본</button>
-      <button class="tab-btn" data-tab="calendar">📅 캘린더</button>
       <button class="tab-btn" data-tab="briefing">🗂 위클리 브리핑</button>
       <button class="tab-btn tab-report" data-tab="report">📋 주간 리포트</button>
       <button class="tab-btn no-print" onclick="openSheet()" style="color:var(--info);font-weight:600;">📊 구글 시트</button>
@@ -550,109 +568,6 @@
 
 
     <!-- 캘린더 -->
-    <div class="view" id="tab-calendar">
-      <div class="cal-toolbar">
-        <div class="cal-nav">
-          <button class="cal-nav-btn" onclick="calNavigate(-1)">&#8249;</button>
-          <span class="cal-nav-label" id="cal-nav-label"></span>
-          <button class="cal-nav-btn" onclick="calNavigate(1)">&#8250;</button>
-          <button class="week-nav-today" onclick="calGoToday()" style="margin-left:4px;">오늘</button>
-        </div>
-        <div class="cal-view-toggle">
-          <button class="cal-view-btn active" id="cal-btn-month" onclick="calSwitchView('month')">월간</button>
-          <button class="cal-view-btn" id="cal-btn-week" onclick="calSwitchView('week')">주간</button>
-        </div>
-        <button class="btn" style="background:var(--warn-light);color:var(--warn);border-color:var(--warn);" onclick="openCalModal()">
-          + 직접 입력
-        </button>
-      </div>
-      <div class="cal-legend">
-        <div class="cal-leg"><div class="cal-leg-dot ev-meeting"></div> 아웃룩 미팅</div>
-        <div class="cal-leg"><div class="cal-leg-dot ev-task"></div> 업무 마감일</div>
-        <div class="cal-leg"><div class="cal-leg-dot ev-leave"></div> 연차/휴가</div>
-      </div>
-      <div id="cal-month-view">
-        <div class="cal-wrap">
-          <div class="cal-head">
-            <div class="cal-head-cell">일</div>
-            <div class="cal-head-cell">월</div>
-            <div class="cal-head-cell">화</div>
-            <div class="cal-head-cell">수</div>
-            <div class="cal-head-cell">목</div>
-            <div class="cal-head-cell">금</div>
-            <div class="cal-head-cell">토</div>
-          </div>
-          <div class="cal-body" id="cal-body"></div>
-        </div>
-      </div>
-      <div id="cal-week-view" style="display:none;">
-        <div class="week-wrap">
-          <div class="week-head">
-            <div class="week-head-time"></div>
-            <div class="week-head-day" id="wh0"></div>
-            <div class="week-head-day" id="wh1"></div>
-            <div class="week-head-day" id="wh2"></div>
-            <div class="week-head-day" id="wh3"></div>
-            <div class="week-head-day" id="wh4"></div>
-            <div class="week-head-day" id="wh5"></div>
-            <div class="week-head-day" id="wh6"></div>
-          </div>
-          <div class="week-body" id="week-body"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 일정 추가 모달 -->
-    <div class="cal-modal-overlay" id="cal-modal-overlay">
-      <div class="modal">
-        <div class="modal-title">일정 직접 입력</div>
-        <div class="form-row">
-          <label class="form-label">종류</label>
-          <select class="form-select" id="cal-type">
-            <option value="leave">연차/휴가</option>
-            <option value="meeting">미팅/회의</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label class="form-label">제목</label>
-          <input class="form-input" type="text" id="cal-title" placeholder="예: 김승현 연차">
-        </div>
-        <div class="form-row">
-          <label class="form-label">담당자</label>
-          <select class="form-select" id="cal-who"></select>
-        </div>
-        <div class="form-grid">
-          <div class="form-row">
-            <label class="form-label">날짜</label>
-            <input class="form-input" type="date" id="cal-date">
-          </div>
-          <div class="form-row">
-            <label class="form-label">시간 (선택)</label>
-            <input class="form-input" type="time" id="cal-time">
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button class="btn" onclick="closeCalModal()">취소</button>
-          <button class="btn btn-primary" onclick="saveCalEvent()">저장</button>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- 일정 상세 팝업 -->
-    <div class="cal-detail-popup" id="cal-detail-popup">
-      <button class="cal-detail-close" onclick="closeCalDetail()">×</button>
-      <div class="cal-detail-title" id="cal-detail-title"></div>
-      <div id="cal-detail-body"></div>
-    </div>
-
-    <!-- 날짜 전체 일정 팝업 -->
-    <div class="cal-day-popup" id="cal-day-popup">
-      <button class="cal-day-popup-close" onclick="closeCalDayPopup()">×</button>
-      <div class="cal-day-popup-title" id="cal-day-popup-title"></div>
-      <div id="cal-day-popup-body"></div>
-    </div>
-
     <!-- 위클리 브리핑 -->
     <div class="view" id="tab-briefing">
       <div class="briefing-header">
@@ -1083,7 +998,6 @@
     renderReport();
     updateMetrics();
     updateMemberSelect();
-    if (currentTabId === 'calendar') renderCal();
     if (currentTabId === 'briefing') renderBriefing();
   }
 
@@ -1181,7 +1095,9 @@
       return 6;
     }
 
-    const rows = tasks.map(t => {
+    const rows = [];
+    const mcards = [];
+    tasks.forEach(t => {
       const isDone = t.status === '완료';
       const endDate = parseDate(t.end);
       const isOverdue = !isDone && endDate < today;
@@ -1201,20 +1117,31 @@
         return `<div class="briefing-block-cell"><div class="briefing-block ${blockClass}" onclick="openBlockMemo('${t.id}', event)"${hoverAttrs}>${memoMark}</div></div>`;
       }).join('');
 
-      return `<div class="briefing-row">
+      rows.push(`<div class="briefing-row">
         <div class="briefing-task-cell">
           <span class="briefing-badge p${p}"${badgeClick}>${badgeLabel}</span>
           <span class="briefing-task-title${isDone ? ' done' : ''}" onclick="openModal('edit', null, '${t.id}')">${t.title || t.mainTitle}</span>
         </div>
         ${blocks}
-      </div>`;
-    }).join('');
+      </div>`);
+
+      const tagClass = isDone ? 'done' : (isOverdue ? 'overdue' : 'active');
+      const dayLabel = col === 0 ? '지연' : col === 6 ? '예정' : `${DOW_LABELS[weekdays[col-1].getDay()]} ${fmtDate(weekdays[col-1])}`;
+      mcards.push(`<div class="briefing-mcard">
+        <div class="briefing-mcard-left">
+          <span class="briefing-badge p${p}"${badgeClick}>${badgeLabel}</span>
+          <span class="briefing-mcard-title${isDone ? ' done' : ''}" onclick="openModal('edit', null, '${t.id}')">${t.title || t.mainTitle}</span>
+        </div>
+        <span class="briefing-mcard-tag ${tagClass}" onclick="openBlockMemo('${t.id}', event)">${dayLabel}${memoMark}</span>
+      </div>`);
+    });
 
     grid.innerHTML = `
       <div class="briefing-table">
         <div class="briefing-row briefing-head"><div></div>${headCells}</div>
-        ${rows}
-      </div>`;
+        ${rows.join('')}
+      </div>
+      <div class="briefing-mobile-cards">${mcards.join('')}</div>`;
   }
 
   async function cycleBriefingPriority(taskId) {
@@ -1723,7 +1650,6 @@
     } else {
       const view = document.getElementById('tab-' + tabId);
       if (view) view.classList.add('active');
-      if (tabId === 'calendar') renderCal();
       if (tabId === 'briefing') renderBriefing();
     }
   }
