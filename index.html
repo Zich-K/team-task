@@ -107,28 +107,47 @@
   .briefing-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .briefing-header-title { font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
   .briefing-table { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-  .briefing-row { display: grid; grid-template-columns: 220px repeat(7, 1fr); align-items: center; min-height: 42px; border-top: 1px solid var(--border); }
+  .briefing-row { display: grid; grid-template-columns: 320px repeat(7, 1fr); align-items: stretch; min-height: 44px; border-top: 1px solid var(--border); }
   .briefing-row:first-child { border-top: none; }
   .briefing-head { background: var(--surface2); font-size: 12px; color: var(--text-secondary); }
   .briefing-head-cell { text-align: center; padding: 8px 4px; }
   .briefing-head-cell .dow { font-size: 11px; color: var(--text-muted); }
   .briefing-head-cell.today { background: var(--danger-light); border-radius: 4px; }
   .briefing-head-cell.today .date, .briefing-head-cell.today .dow { color: var(--danger); font-weight: 700; }
-  .briefing-task-cell { padding: 6px 10px; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .briefing-task-cell { padding: 6px 12px; display: flex; align-items: center; gap: 8px; min-width: 0; }
   .briefing-task-title { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   .briefing-task-title:hover { text-decoration: underline; }
   .briefing-task-title.done { color: var(--text-secondary); }
-  .briefing-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+  .briefing-badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; cursor: pointer; user-select: none; }
+  .briefing-badge:hover { filter: brightness(0.95); }
   .briefing-badge.p1 { background: var(--danger-light); color: var(--danger); }
   .briefing-badge.p2 { background: var(--amber); color: var(--amber-text); }
   .briefing-badge.p3 { background: var(--accent-light); color: var(--accent-text); }
-  .briefing-badge.p0 { background: var(--surface2); color: var(--text-muted); }
-  .briefing-dot-cell { display: flex; align-items: center; justify-content: center; }
-  .briefing-dot { width: 10px; height: 10px; border-radius: 50%; cursor: pointer; }
-  .briefing-dot.overdue { background: var(--danger); }
-  .briefing-dot.active { background: var(--info); }
-  .briefing-dot.done { background: var(--text-muted); }
+  .briefing-badge.p0 { background: var(--surface2); color: var(--text-muted); cursor: default; }
+  .briefing-block-cell { padding: 5px; display: flex; }
+  .briefing-block { flex: 1; border-radius: 5px; cursor: pointer; min-height: 30px; position: relative; overflow: hidden; }
+  .briefing-block.overdue { background: var(--danger); }
+  .briefing-block.active { background: var(--info); }
+  .briefing-block.done { background: var(--border2); }
+  .briefing-block .memo-mark { position: absolute; top: 2px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.85); }
+  .briefing-block .memo-watermark {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 2px; font-size: 9px; line-height: 1.2; color: #fff; text-align: center;
+    overflow: hidden; opacity: 0; pointer-events: none; transition: opacity .12s ease;
+    background: rgba(0,0,0,0.35);
+  }
+  .briefing-block:hover .memo-watermark { opacity: 1; }
   .briefing-empty { padding: 30px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+  /* 블록 메모 편집 팝업 */
+  .block-memo-popup {
+    display: none; position: fixed; z-index: 2100;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 14px 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    width: 240px;
+  }
+  .block-memo-popup.show { display: block; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); }
   .legend-dot { width: 12px; height: 12px; border-radius: 3px; border: 1px solid; }
   .legend-long { background: var(--long); border-color: var(--long-border); }
@@ -731,14 +750,6 @@
         <option>예정</option><option>진행 중</option><option>보류</option><option>완료</option>
       </select>
     </div>
-    <div class="form-row">
-      <label class="form-label">우선순위</label>
-      <select class="form-select" id="f-priority">
-        <option value="1">① 높음</option>
-        <option value="2" selected>② 보통</option>
-        <option value="3">③ 낮음</option>
-      </select>
-    </div>
     <div class="form-grid">
       <div class="form-row">
         <label class="form-label">시작일</label>
@@ -762,6 +773,16 @@
 
 <div class="stay-tooltip" id="stay-tooltip"></div>
 <div class="toast" id="toast"></div>
+
+<div class="block-memo-popup" id="block-memo-popup">
+  <button class="cal-detail-close" onclick="closeBlockMemo()">×</button>
+  <div class="cal-detail-title" id="block-memo-title">메모</div>
+  <textarea class="form-textarea" id="block-memo-text" placeholder="메모를 입력하세요" style="width:100%;min-height:70px;margin-bottom:10px;"></textarea>
+  <div class="modal-actions" style="margin-top:0;">
+    <button class="btn" onclick="deleteBlockMemo()">삭제</button>
+    <button class="btn btn-primary" onclick="saveBlockMemo()">저장</button>
+  </div>
+</div>
 
 <script>
   const API_URL = 'https://script.google.com/macros/s/AKfycbx0b6m1WQbicHgmAnEhT6504yTXZAc2K_3zelPs6XqxIRXr7kHVviBy-BGhIUu6sQSczg/exec';
@@ -1137,20 +1158,23 @@
       const p = isDone ? '0' : (t.priority || '2');
       const badgeLabel = { '1':'①', '2':'②', '3':'③', '0':'-' }[p] || '②';
       const dayIdx = Math.min(6, Math.max(0, Math.round((endDate - currentMonday) / oneDay)));
+      const badgeClick = isDone ? '' : ` onclick="event.stopPropagation();cycleBriefingPriority('${t.id}')"`;
 
-      const dots = weekDays.map((d, i) => {
+      const blocks = weekDays.map((d, i) => {
         if (i !== dayIdx) return '<div></div>';
-        const dotClass = isDone ? 'done' : (isOverdue ? 'overdue' : 'active');
-        const tip = isOverdue ? `${t.title || t.mainTitle} · 마감 지남` : (t.title || t.mainTitle);
-        return `<div class="briefing-dot-cell"><div class="briefing-dot ${dotClass}" title="${tip}" onclick="openModal('edit', null, '${t.id}')"></div></div>`;
+        const blockClass = isDone ? 'done' : (isOverdue ? 'overdue' : 'active');
+        const memo = (t.blockNote || '').trim();
+        const memoMark = memo ? '<div class="memo-mark"></div>' : '';
+        const watermark = memo ? `<div class="memo-watermark">${escapeHtml(memo)}</div>` : '';
+        return `<div class="briefing-block-cell"><div class="briefing-block ${blockClass}" onclick="openBlockMemo('${t.id}', event)">${memoMark}${watermark}</div></div>`;
       }).join('');
 
       return `<div class="briefing-row">
         <div class="briefing-task-cell">
-          <span class="briefing-badge p${p}">${badgeLabel}</span>
+          <span class="briefing-badge p${p}"${badgeClick}>${badgeLabel}</span>
           <span class="briefing-task-title${isDone ? ' done' : ''}" onclick="openModal('edit', null, '${t.id}')">${t.title || t.mainTitle}</span>
         </div>
-        ${dots}
+        ${blocks}
       </div>`;
     }).join('');
 
@@ -1159,6 +1183,72 @@
         <div class="briefing-row briefing-head"><div></div>${headCells}</div>
         ${rows}
       </div>`;
+  }
+
+  async function cycleBriefingPriority(taskId) {
+    const idx = ALL_TASKS.findIndex(t => t.id === taskId);
+    if (idx === -1) return;
+    const cur = ALL_TASKS[idx].priority || '2';
+    const next = { '1':'2', '2':'3', '3':'1' }[cur] || '1';
+    ALL_TASKS[idx] = { ...ALL_TASKS[idx], priority: next };
+    renderBriefing();
+    if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+      await api({ action: 'save', task: JSON.stringify(ALL_TASKS[idx]) });
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // ── 블록 메모 편집 ──
+  let blockMemoTaskId = null;
+  function openBlockMemo(taskId, evt) {
+    evt.stopPropagation();
+    const task = ALL_TASKS.find(t => t.id === taskId);
+    if (!task) return;
+    blockMemoTaskId = taskId;
+    document.getElementById('block-memo-title').textContent = task.title || task.mainTitle || '메모';
+    document.getElementById('block-memo-text').value = task.blockNote || '';
+    const popup = document.getElementById('block-memo-popup');
+    popup.classList.add('show');
+    const pw = 240, margin = 10;
+    let left = evt.clientX + 12;
+    let top = evt.clientY + 12;
+    if (left + pw + margin > window.innerWidth) left = window.innerWidth - pw - margin;
+    if (top + 160 + margin > window.innerHeight) top = window.innerHeight - 160 - margin;
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+    setTimeout(() => document.getElementById('block-memo-text').focus(), 30);
+  }
+  function closeBlockMemo() {
+    document.getElementById('block-memo-popup').classList.remove('show');
+    blockMemoTaskId = null;
+  }
+  async function saveBlockMemo() {
+    if (!blockMemoTaskId) return;
+    const idx = ALL_TASKS.findIndex(t => t.id === blockMemoTaskId);
+    if (idx === -1) return;
+    const memo = document.getElementById('block-memo-text').value.trim();
+    ALL_TASKS[idx] = { ...ALL_TASKS[idx], blockNote: memo };
+    closeBlockMemo();
+    renderBriefing();
+    if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+      await api({ action: 'save', task: JSON.stringify(ALL_TASKS[idx]) });
+    }
+  }
+  async function deleteBlockMemo() {
+    if (!blockMemoTaskId) return;
+    const idx = ALL_TASKS.findIndex(t => t.id === blockMemoTaskId);
+    if (idx === -1) return;
+    ALL_TASKS[idx] = { ...ALL_TASKS[idx], blockNote: '' };
+    closeBlockMemo();
+    renderBriefing();
+    if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+      await api({ action: 'save', task: JSON.stringify(ALL_TASKS[idx]) });
+    }
   }
 
   // ── 동적 멤버 탭 ──
@@ -1613,7 +1703,6 @@
       if (task.member) { const match = [...sel.options].find(o => task.member.includes(o.value) || o.value === task.member); if (match) sel.value = match.value; }
       const ss = document.getElementById('f-status');
       for (let i=0;i<ss.options.length;i++) { if (ss.options[i].value===task.status) { ss.selectedIndex=i; break; } }
-      document.getElementById('f-priority').value = task.priority || '2';
     } else {
       document.getElementById('f-main').value = '';
       document.getElementById('f-sub').value = '';
@@ -1622,7 +1711,6 @@
       document.getElementById('f-note').value = '';
       updateMemberSelect();
       document.getElementById('f-status').selectedIndex = 0;
-      document.getElementById('f-priority').value = '2';
     }
     document.getElementById('modal-overlay').classList.add('open');
     setTimeout(() => document.getElementById('f-main').focus(), 50);
@@ -1644,7 +1732,7 @@
       start:     document.getElementById('f-start').value,
       end:       document.getElementById('f-end').value,
       note:      document.getElementById('f-note').value.trim(),
-      priority:  document.getElementById('f-priority').value,
+      priority:  (editingId ? (ALL_TASKS.find(t => t.id === editingId)?.priority || '2') : '2'),
     };
     closeModal();
     if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
@@ -2111,6 +2199,7 @@
   document.addEventListener('click', function(e) {
     if (!e.target.closest('.cal-detail-popup')) closeCalDetail();
     if (!e.target.closest('.cal-day-popup')) closeCalDayPopup();
+    if (!e.target.closest('.block-memo-popup') && !e.target.closest('.briefing-block')) closeBlockMemo();
   });
 
   function renderCalWeek() {
