@@ -24,6 +24,7 @@
     --purple: #4a2d8a; --purple-light: #f0ecfc;
     --long: #fce4ec; --long-border: #f48fb1; --long-text: #880e4f;
     --new: #f1f8e9; --new-border: #aed581; --new-text: #33691e;
+    --amber: #fdf1dc; --amber-border: #f0c674; --amber-text: #8a5a00;
     --modified: #e3f2fd; --modified-border: #81d4fa; --modified-text: #01579b;
     --done-opacity: 0.5;
     --radius: 8px; --radius-lg: 12px;
@@ -101,6 +102,33 @@
 
   /* ── 범례 ── */
   .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+
+  /* ── 위클리 브리핑 ── */
+  .briefing-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .briefing-header-title { font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
+  .briefing-table { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .briefing-row { display: grid; grid-template-columns: 220px repeat(7, 1fr); align-items: center; min-height: 42px; border-top: 1px solid var(--border); }
+  .briefing-row:first-child { border-top: none; }
+  .briefing-head { background: var(--surface2); font-size: 12px; color: var(--text-secondary); }
+  .briefing-head-cell { text-align: center; padding: 8px 4px; }
+  .briefing-head-cell .dow { font-size: 11px; color: var(--text-muted); }
+  .briefing-head-cell.today { background: var(--danger-light); border-radius: 4px; }
+  .briefing-head-cell.today .date, .briefing-head-cell.today .dow { color: var(--danger); font-weight: 700; }
+  .briefing-task-cell { padding: 6px 10px; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .briefing-task-title { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  .briefing-task-title:hover { text-decoration: underline; }
+  .briefing-task-title.done { color: var(--text-secondary); }
+  .briefing-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+  .briefing-badge.p1 { background: var(--danger-light); color: var(--danger); }
+  .briefing-badge.p2 { background: var(--amber); color: var(--amber-text); }
+  .briefing-badge.p3 { background: var(--accent-light); color: var(--accent-text); }
+  .briefing-badge.p0 { background: var(--surface2); color: var(--text-muted); }
+  .briefing-dot-cell { display: flex; align-items: center; justify-content: center; }
+  .briefing-dot { width: 10px; height: 10px; border-radius: 50%; cursor: pointer; }
+  .briefing-dot.overdue { background: var(--danger); }
+  .briefing-dot.active { background: var(--info); }
+  .briefing-dot.done { background: var(--text-muted); }
+  .briefing-empty { padding: 30px; text-align: center; color: var(--text-muted); font-size: 13px; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); }
   .legend-dot { width: 12px; height: 12px; border-radius: 3px; border: 1px solid; }
   .legend-long { background: var(--long); border-color: var(--long-border); }
@@ -409,6 +437,7 @@
       <div id="member-tabs"></div>
       <button class="tab-btn" data-tab="team">팀 합본</button>
       <button class="tab-btn" data-tab="calendar">📅 캘린더</button>
+      <button class="tab-btn" data-tab="briefing">🗂 위클리 브리핑</button>
       <button class="tab-btn tab-report" data-tab="report">📋 주간 리포트</button>
       <button class="tab-btn no-print" onclick="openSheet()" style="color:var(--info);font-weight:600;">📊 구글 시트</button>
     </div>
@@ -594,6 +623,15 @@
       <div id="cal-day-popup-body"></div>
     </div>
 
+    <!-- 위클리 브리핑 -->
+    <div class="view" id="tab-briefing">
+      <div class="briefing-header">
+        <div class="briefing-header-title"><i>🗂</i> 이번주 브리핑</div>
+        <select class="form-select" id="briefing-member" style="width:140px;" onchange="renderBriefing()"></select>
+      </div>
+      <div id="briefing-grid"></div>
+    </div>
+
     <!-- 주간 리포트 -->
     <div class="view" id="tab-report">
       <div class="report-wrap">
@@ -691,6 +729,14 @@
       <label class="form-label">상태</label>
       <select class="form-select" id="f-status">
         <option>예정</option><option>진행 중</option><option>보류</option><option>완료</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">우선순위</label>
+      <select class="form-select" id="f-priority">
+        <option value="1">① 높음</option>
+        <option value="2" selected>② 보통</option>
+        <option value="3">③ 낮음</option>
       </select>
     </div>
     <div class="form-grid">
@@ -1004,6 +1050,7 @@
     updateMetrics();
     updateMemberSelect();
     if (currentTabId === 'calendar') renderCal();
+    if (currentTabId === 'briefing') renderBriefing();
   }
 
   // ── 대시보드 ──
@@ -1020,6 +1067,98 @@
     if (nl) nl.textContent = `${formatWeekLabel(nm)} (${fmtDate(nm)}~${fmtDate(getNextSunday())})`;
     renderGroupedTable(getThisWeekTasks(), true, 'tbody-team-last', 'team-this');
     renderGroupedTable(getNextWeekTasks(), true, 'tbody-team-next', 'team-next');
+  }
+
+  // ── 위클리 브리핑 ──
+  const DOW_LABELS = ['일','월','화','수','목','금','토'];
+
+  function populateBriefingMemberSelect() {
+    const sel = document.getElementById('briefing-member');
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="전체">전체</option>' +
+      ALL_USERS.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+    if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+  }
+
+  function renderBriefing() {
+    populateBriefingMemberSelect();
+    const grid = document.getElementById('briefing-grid');
+    if (!grid) return;
+
+    const selMember = document.getElementById('briefing-member').value || '전체';
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(currentMonday);
+      d.setDate(d.getDate() + i);
+      weekDays.push(d);
+    }
+    const today = new Date(); today.setHours(0,0,0,0);
+    const oneDay = 24*60*60*1000;
+
+    let tasks = ALL_TASKS.filter(t => {
+      if (selMember !== '전체' && !(t.member || '').includes(selMember)) return false;
+      if (!t.end) return false;
+      const endDate = parseDate(t.end);
+      if (!endDate || isNaN(endDate)) return false;
+      const isDone = t.status === '완료';
+      const dayIdx = Math.round((endDate - currentMonday) / oneDay);
+      if (isDone) return dayIdx >= 0 && dayIdx <= 6;
+      return true; // 미완료는 지연 포함 전부 표시
+    });
+
+    tasks.sort((a, b) => {
+      const pa = parseInt(a.priority) || 2, pb = parseInt(b.priority) || 2;
+      if (pa !== pb) return pa - pb;
+      return (parseDate(a.end) || 0) - (parseDate(b.end) || 0);
+    });
+
+    const headCells = weekDays.map(d => {
+      const isToday = d.getTime() === today.getTime();
+      return `<div class="briefing-head-cell${isToday ? ' today' : ''}">
+        <div class="date">${fmtDate(d)}</div>
+        <div class="dow">${DOW_LABELS[d.getDay()]}</div>
+      </div>`;
+    }).join('');
+
+    if (tasks.length === 0) {
+      grid.innerHTML = `
+        <div class="briefing-table">
+          <div class="briefing-row briefing-head"><div></div>${headCells}</div>
+        </div>
+        <div class="briefing-empty">해당 조건의 업무가 없습니다</div>`;
+      return;
+    }
+
+    const rows = tasks.map(t => {
+      const isDone = t.status === '완료';
+      const endDate = parseDate(t.end);
+      const isOverdue = !isDone && endDate < today;
+      const p = isDone ? '0' : (t.priority || '2');
+      const badgeLabel = { '1':'①', '2':'②', '3':'③', '0':'-' }[p] || '②';
+      const dayIdx = Math.min(6, Math.max(0, Math.round((endDate - currentMonday) / oneDay)));
+
+      const dots = weekDays.map((d, i) => {
+        if (i !== dayIdx) return '<div></div>';
+        const dotClass = isDone ? 'done' : (isOverdue ? 'overdue' : 'active');
+        const tip = isOverdue ? `${t.title || t.mainTitle} · 마감 지남` : (t.title || t.mainTitle);
+        return `<div class="briefing-dot-cell"><div class="briefing-dot ${dotClass}" title="${tip}" onclick="openModal('edit', null, '${t.id}')"></div></div>`;
+      }).join('');
+
+      return `<div class="briefing-row">
+        <div class="briefing-task-cell">
+          <span class="briefing-badge p${p}">${badgeLabel}</span>
+          <span class="briefing-task-title${isDone ? ' done' : ''}" onclick="openModal('edit', null, '${t.id}')">${t.title || t.mainTitle}</span>
+        </div>
+        ${dots}
+      </div>`;
+    }).join('');
+
+    grid.innerHTML = `
+      <div class="briefing-table">
+        <div class="briefing-row briefing-head"><div></div>${headCells}</div>
+        ${rows}
+      </div>`;
   }
 
   // ── 동적 멤버 탭 ──
@@ -1434,6 +1573,7 @@
       const view = document.getElementById('tab-' + tabId);
       if (view) view.classList.add('active');
       if (tabId === 'calendar') renderCal();
+      if (tabId === 'briefing') renderBriefing();
     }
   }
 
@@ -1473,6 +1613,7 @@
       if (task.member) { const match = [...sel.options].find(o => task.member.includes(o.value) || o.value === task.member); if (match) sel.value = match.value; }
       const ss = document.getElementById('f-status');
       for (let i=0;i<ss.options.length;i++) { if (ss.options[i].value===task.status) { ss.selectedIndex=i; break; } }
+      document.getElementById('f-priority').value = task.priority || '2';
     } else {
       document.getElementById('f-main').value = '';
       document.getElementById('f-sub').value = '';
@@ -1481,6 +1622,7 @@
       document.getElementById('f-note').value = '';
       updateMemberSelect();
       document.getElementById('f-status').selectedIndex = 0;
+      document.getElementById('f-priority').value = '2';
     }
     document.getElementById('modal-overlay').classList.add('open');
     setTimeout(() => document.getElementById('f-main').focus(), 50);
@@ -1502,6 +1644,7 @@
       start:     document.getElementById('f-start').value,
       end:       document.getElementById('f-end').value,
       note:      document.getElementById('f-note').value.trim(),
+      priority:  document.getElementById('f-priority').value,
     };
     closeModal();
     if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
