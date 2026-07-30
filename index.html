@@ -167,6 +167,25 @@
   .perf-category-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 2px; border-bottom: 1px solid var(--border2); margin-bottom: 10px; }
   .perf-category-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
   .perf-category-total { font-size: 12px; color: var(--text-secondary); }
+  .perf-kpi-tasklist { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .perf-kpi-tasklist li { font-size: 12px; color: var(--text-secondary); }
+  .perf-kpi-tasklist-mark { display: inline-block; width: 14px; color: var(--text-muted); }
+  .perf-kpi-tasklist-mark.done { color: var(--accent); font-weight: 700; }
+  .perf-kpi-tasklist-member { color: var(--text-muted); }
+  .perf-kpi-tasklist-empty { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .perf-detail-table { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .perf-detail-row { display: grid; grid-template-columns: 70px 1fr 160px 70px 90px; gap: 8px; padding: 8px 12px; align-items: center; border-top: 1px solid var(--border); font-size: 12px; }
+  .perf-detail-row:first-child { border-top: none; }
+  .perf-detail-head { background: var(--surface2); font-weight: 600; color: var(--text-secondary); font-size: 11px; }
+  .perf-detail-member { color: var(--text-secondary); }
+  .perf-detail-title { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .perf-detail-title:hover { text-decoration: underline; }
+  .perf-detail-kpi { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .perf-detail-status { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; text-align: center; }
+  .perf-detail-status.done { background: var(--surface2); color: var(--text-muted); }
+  .perf-detail-status.overdue { background: var(--danger-light); color: var(--danger); }
+  .perf-detail-status.active { background: var(--info-light); color: var(--info); }
+  .perf-detail-end { color: var(--text-secondary); }
 
   /* 위클리 브리핑 모바일 카드뷰 (세로모드) */
   .briefing-mobile-cards { display: none; flex-direction: column; gap: 8px; }
@@ -1361,7 +1380,7 @@
     const kpiStats = ALL_KPIS.map(k => {
       const linked = tasks.filter(t => t.kpiId === k.id);
       const kdone = linked.filter(t => t.status === '완료').length;
-      return { ...k, count: linked.length, done: kdone };
+      return { ...k, count: linked.length, done: kdone, linked };
     });
 
     const CATEGORY_ORDER = ['인재육성', '프로세스개선', '장기프로젝트'];
@@ -1382,6 +1401,12 @@
       const catDone = items.reduce((s,k) => s + k.done, 0);
       const cards = items.map(k => {
         const pct = k.count > 0 ? Math.round((k.done / k.count) * 100) : 0;
+        const taskList = k.linked.length
+          ? `<ul class="perf-kpi-tasklist">${k.linked.map(t => {
+              const doneMark = t.status === '완료' ? '✓' : '·';
+              return `<li><span class="perf-kpi-tasklist-mark ${t.status==='완료'?'done':''}">${doneMark}</span> ${t.title || t.mainTitle} <span class="perf-kpi-tasklist-member">(${t.member||''})</span></li>`;
+            }).join('')}</ul>`
+          : `<div class="perf-kpi-tasklist-empty">이 기간 연결된 업무 없음</div>`;
         return `<div class="perf-kpi-card">
           <div class="perf-kpi-top">
             <div>
@@ -1391,6 +1416,7 @@
             <div class="perf-kpi-count">${k.done}/${k.count}건 완료</div>
           </div>
           <div class="perf-kpi-bar-track"><div class="perf-kpi-bar-fill" style="width:${pct}%"></div></div>
+          ${taskList}
         </div>`;
       }).join('');
       return `<div class="perf-category-group">
@@ -1399,6 +1425,26 @@
           <span class="perf-category-total">${catDone}/${catCount}건 완료</span>
         </div>
         ${cards}
+      </div>`;
+    }).join('');
+
+    // 업무 상세 내역 (담당자 → 마감일 순 정렬)
+    const sortedTasks = [...tasks].sort((a, b) => {
+      const ma = (a.member||''), mb = (b.member||'');
+      if (ma !== mb) return ma.localeCompare(mb);
+      return (parseDate(a.end)||0) - (parseDate(b.end)||0);
+    });
+    const kpiLabelById = {};
+    ALL_KPIS.forEach(k => { kpiLabelById[k.id] = k.title; });
+    const detailRows = sortedTasks.map(t => {
+      const statusClass = t.status === '완료' ? 'done' : (parseDate(t.end) < today ? 'overdue' : 'active');
+      const kpiLabel = t.kpiId ? (kpiLabelById[t.kpiId] || t.kpiId) : '-';
+      return `<div class="perf-detail-row">
+        <span class="perf-detail-member">${t.member || ''}</span>
+        <span class="perf-detail-title" onclick="openModal('edit', null, '${t.id}')">${t.title || t.mainTitle}</span>
+        <span class="perf-detail-kpi">${kpiLabel}</span>
+        <span class="perf-detail-status ${statusClass}">${t.status}</span>
+        <span class="perf-detail-end">${t.end}</span>
       </div>`;
     }).join('');
 
@@ -1416,6 +1462,15 @@
       <div class="perf-section">
         <div class="perf-section-title">KPI별 연결 현황</div>
         ${kpiRows || '<div class="briefing-empty">KPI 데이터가 없습니다</div>'}
+      </div>
+      <div class="perf-section">
+        <div class="perf-section-title">업무 상세 내역 (${total}건)</div>
+        <div class="perf-detail-table">
+          <div class="perf-detail-row perf-detail-head">
+            <span>담당자</span><span>업무명</span><span>KPI</span><span>상태</span><span>마감일</span>
+          </div>
+          ${detailRows || '<div class="briefing-empty">해당 기간 업무가 없습니다</div>'}
+        </div>
       </div>`;
   }
 
