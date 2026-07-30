@@ -150,6 +150,8 @@
   .perf-nav-label { font-size: 14px; font-weight: 600; min-width: 110px; text-align: center; }
   .perf-section { margin-bottom: 26px; }
   .perf-section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; }
+  .perf-section-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .perf-section-title-row .perf-section-title { margin-bottom: 0; }
   .perf-member-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .perf-member-name { width: 60px; font-size: 13px; flex-shrink: 0; }
   .perf-member-bar-track { flex: 1; background: var(--surface2); border-radius: 6px; height: 20px; position: relative; overflow: hidden; }
@@ -1429,11 +1431,20 @@
     }).join('');
 
     // 업무 상세 내역 (담당자 → 마감일 순 정렬)
-    const sortedTasks = [...tasks].sort((a, b) => {
-      const ma = (a.member||''), mb = (b.member||'');
-      if (ma !== mb) return ma.localeCompare(mb);
-      return (parseDate(a.end)||0) - (parseDate(b.end)||0);
-    });
+    // 담당자 필터 (업무 상세 내역 전용) — 매번 innerHTML로 교체되므로 옵션을 문자열에 직접 포함
+    const prevFilterEl = document.getElementById('perf-member-filter');
+    const perfSelectedMember = (prevFilterEl && prevFilterEl.value) || '전체';
+    const memberFilterOptions = ['전체', ...ALL_USERS.map(u => u.name)]
+      .map(name => `<option value="${name}"${name === perfSelectedMember ? ' selected' : ''}>${name}</option>`)
+      .join('');
+
+    const sortedTasks = [...tasks]
+      .filter(t => perfSelectedMember === '전체' || t.member === perfSelectedMember)
+      .sort((a, b) => {
+        const ma = (a.member||''), mb = (b.member||'');
+        if (ma !== mb) return ma.localeCompare(mb);
+        return (parseDate(a.end)||0) - (parseDate(b.end)||0);
+      });
     const kpiLabelById = {};
     ALL_KPIS.forEach(k => { kpiLabelById[k.id] = k.title; });
     const detailRows = sortedTasks.map(t => {
@@ -1464,7 +1475,10 @@
         ${kpiRows || '<div class="briefing-empty">KPI 데이터가 없습니다</div>'}
       </div>
       <div class="perf-section">
-        <div class="perf-section-title">업무 상세 내역 (${total}건)</div>
+        <div class="perf-section-title-row">
+          <div class="perf-section-title">업무 상세 내역 (${sortedTasks.length}건)</div>
+          <select class="form-select" id="perf-member-filter" style="width:120px;" onchange="renderPerf()">${memberFilterOptions}</select>
+        </div>
         <div class="perf-detail-table">
           <div class="perf-detail-row perf-detail-head">
             <span>담당자</span><span>업무명</span><span>KPI</span><span>상태</span><span>마감일</span>
