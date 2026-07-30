@@ -163,6 +163,10 @@
   .perf-kpi-bar-track { background: var(--surface2); border-radius: 5px; height: 8px; overflow: hidden; }
   .perf-kpi-bar-fill { height: 100%; background: var(--info); border-radius: 5px; }
   .perf-kpi-owner { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .perf-category-group { margin-bottom: 20px; }
+  .perf-category-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 2px; border-bottom: 1px solid var(--border2); margin-bottom: 10px; }
+  .perf-category-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+  .perf-category-total { font-size: 12px; color: var(--text-secondary); }
 
   /* 위클리 브리핑 모바일 카드뷰 (세로모드) */
   .briefing-mobile-cards { display: none; flex-direction: column; gap: 8px; }
@@ -1360,17 +1364,41 @@
       return { ...k, count: linked.length, done: kdone };
     });
 
-    const kpiRows = kpiStats.map(k => {
-      const pct = k.count > 0 ? Math.round((k.done / k.count) * 100) : 0;
-      return `<div class="perf-kpi-card">
-        <div class="perf-kpi-top">
-          <div>
-            <div class="perf-kpi-title">${k.title}</div>
-            <div class="perf-kpi-cat">${k.category} · ${k.owner}</div>
+    const CATEGORY_ORDER = ['인재육성', '프로세스개선', '장기프로젝트'];
+    const byCategory = {};
+    kpiStats.forEach(k => {
+      const cat = k.category || '기타';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(k);
+    });
+    const categories = [
+      ...CATEGORY_ORDER.filter(c => byCategory[c]),
+      ...Object.keys(byCategory).filter(c => !CATEGORY_ORDER.includes(c)),
+    ];
+
+    const kpiRows = categories.map(cat => {
+      const items = byCategory[cat];
+      const catCount = items.reduce((s,k) => s + k.count, 0);
+      const catDone = items.reduce((s,k) => s + k.done, 0);
+      const cards = items.map(k => {
+        const pct = k.count > 0 ? Math.round((k.done / k.count) * 100) : 0;
+        return `<div class="perf-kpi-card">
+          <div class="perf-kpi-top">
+            <div>
+              <div class="perf-kpi-title">${k.title}</div>
+              <div class="perf-kpi-cat">${k.owner}</div>
+            </div>
+            <div class="perf-kpi-count">${k.done}/${k.count}건 완료</div>
           </div>
-          <div class="perf-kpi-count">${k.done}/${k.count}건 완료</div>
+          <div class="perf-kpi-bar-track"><div class="perf-kpi-bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
+      }).join('');
+      return `<div class="perf-category-group">
+        <div class="perf-category-header">
+          <span class="perf-category-name">${cat}</span>
+          <span class="perf-category-total">${catDone}/${catCount}건 완료</span>
         </div>
-        <div class="perf-kpi-bar-track"><div class="perf-kpi-bar-fill" style="width:${pct}%"></div></div>
+        ${cards}
       </div>`;
     }).join('');
 
