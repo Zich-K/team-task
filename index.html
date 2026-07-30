@@ -2184,8 +2184,6 @@
   }
 
   document.addEventListener('click', function(e) {
-    if (!e.target.closest('.cal-detail-popup')) closeCalDetail();
-    if (!e.target.closest('.cal-day-popup')) closeCalDayPopup();
     if (!e.target.closest('.block-memo-popup') && !e.target.closest('.briefing-block')) closeBlockMemo();
   });
 
@@ -2299,10 +2297,6 @@
       if (result && result.events) CAL_EVENTS = result.events;
     }
   }
-
-  document.getElementById('cal-modal-overlay').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeCalModal();
-  });
 
   // ── 초기 로드 ──
   document.addEventListener('DOMContentLoaded', () => { updateWeekUI(); }, { once: true });
