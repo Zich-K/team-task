@@ -141,6 +141,29 @@
   }
   .briefing-empty { padding: 30px; text-align: center; color: var(--text-muted); font-size: 13px; }
 
+  /* ── 성과 리포트 ── */
+  .perf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+  .perf-toggle { display: flex; gap: 6px; background: var(--surface2); border-radius: 20px; padding: 4px; }
+  .perf-toggle-btn { border: none; background: none; padding: 6px 16px; border-radius: 16px; font-size: 13px; font-family: var(--font); color: var(--text-secondary); cursor: pointer; }
+  .perf-toggle-btn.active { background: var(--accent); color: #fff; }
+  .perf-nav { display: flex; align-items: center; gap: 10px; }
+  .perf-nav-label { font-size: 14px; font-weight: 600; min-width: 110px; text-align: center; }
+  .perf-section { margin-bottom: 26px; }
+  .perf-section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; }
+  .perf-member-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .perf-member-name { width: 60px; font-size: 13px; flex-shrink: 0; }
+  .perf-member-bar-track { flex: 1; background: var(--surface2); border-radius: 6px; height: 20px; position: relative; overflow: hidden; }
+  .perf-member-bar-fill { height: 100%; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; box-sizing: border-box; min-width: 28px; }
+  .perf-member-bar-fill span { font-size: 11px; color: #fff; font-weight: 600; }
+  .perf-kpi-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; }
+  .perf-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 10px; }
+  .perf-kpi-title { font-size: 13px; font-weight: 500; }
+  .perf-kpi-cat { font-size: 11px; color: var(--text-muted); }
+  .perf-kpi-count { font-size: 12px; color: var(--text-secondary); flex-shrink: 0; }
+  .perf-kpi-bar-track { background: var(--surface2); border-radius: 5px; height: 8px; overflow: hidden; }
+  .perf-kpi-bar-fill { height: 100%; background: var(--info); border-radius: 5px; }
+  .perf-kpi-owner { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
   /* 위클리 브리핑 모바일 카드뷰 (세로모드) */
   .briefing-mobile-cards { display: none; flex-direction: column; gap: 8px; }
   body.portrait .briefing-table { display: none !important; }
@@ -486,6 +509,7 @@
       <div id="member-tabs"></div>
       <button class="tab-btn" data-tab="team">팀 합본</button>
       <button class="tab-btn" data-tab="briefing">🗂 위클리 브리핑</button>
+      <button class="tab-btn" data-tab="perf">📈 성과 리포트</button>
       <button class="tab-btn tab-report" data-tab="report">📋 주간 리포트</button>
       <button class="tab-btn no-print" onclick="openSheet()" style="color:var(--info);font-weight:600;">📊 구글 시트</button>
     </div>
@@ -575,6 +599,22 @@
         <select class="form-select" id="briefing-member" style="width:140px;" onchange="renderBriefing()"></select>
       </div>
       <div id="briefing-grid"></div>
+    </div>
+
+    <!-- 성과 리포트 -->
+    <div class="view" id="tab-perf">
+      <div class="perf-header">
+        <div class="perf-toggle">
+          <button class="perf-toggle-btn active" id="perf-btn-month" onclick="setPerfMode('month')">월별</button>
+          <button class="perf-toggle-btn" id="perf-btn-quarter" onclick="setPerfMode('quarter')">분기별</button>
+        </div>
+        <div class="perf-nav">
+          <button class="btn btn-sm" onclick="movePerf(-1)">◀</button>
+          <span class="perf-nav-label" id="perf-nav-label"></span>
+          <button class="btn btn-sm" onclick="movePerf(1)">▶</button>
+        </div>
+      </div>
+      <div id="perf-body"></div>
     </div>
 
     <!-- 주간 리포트 -->
@@ -719,6 +759,7 @@
   // ── 전역 상태 ──
   let ALL_TASKS = [];
   let ALL_USERS = [];
+  let ALL_KPIS = [];
   let editingId = null;
   let currentTabId = 'dashboard';
   const doneState = { dashboard: true };
@@ -999,6 +1040,7 @@
     updateMetrics();
     updateMemberSelect();
     if (currentTabId === 'briefing') renderBriefing();
+    if (currentTabId === 'perf') renderPerf();
   }
 
   // ── 대시보드 ──
@@ -1237,6 +1279,116 @@
     if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
       await api({ action: 'save', task: JSON.stringify(ALL_TASKS[idx]) });
     }
+  }
+
+  // ── 성과 리포트 ──
+  let perfMode = 'month';
+  const _perfNow = new Date();
+  let perfYear = _perfNow.getFullYear();
+  let perfMonth = _perfNow.getMonth();
+  let perfQuarter = Math.floor(perfMonth / 3) + 1;
+
+  function setPerfMode(mode) {
+    perfMode = mode;
+    document.getElementById('perf-btn-month').classList.toggle('active', mode === 'month');
+    document.getElementById('perf-btn-quarter').classList.toggle('active', mode === 'quarter');
+    renderPerf();
+  }
+
+  function movePerf(dir) {
+    if (perfMode === 'month') {
+      perfMonth += dir;
+      if (perfMonth > 11) { perfMonth = 0; perfYear++; }
+      if (perfMonth < 0) { perfMonth = 11; perfYear--; }
+    } else {
+      perfQuarter += dir;
+      if (perfQuarter > 4) { perfQuarter = 1; perfYear++; }
+      if (perfQuarter < 1) { perfQuarter = 4; perfYear--; }
+    }
+    renderPerf();
+  }
+
+  function getPerfRange() {
+    if (perfMode === 'month') {
+      const start = new Date(perfYear, perfMonth, 1);
+      const end = new Date(perfYear, perfMonth + 1, 0, 23, 59, 59, 999);
+      return { start, end, label: `${perfYear}년 ${perfMonth + 1}월` };
+    }
+    const startMonth = (perfQuarter - 1) * 3;
+    const start = new Date(perfYear, startMonth, 1);
+    const end = new Date(perfYear, startMonth + 3, 0, 23, 59, 59, 999);
+    return { start, end, label: `${perfYear}년 ${perfQuarter}분기` };
+  }
+
+  function renderPerf() {
+    const body = document.getElementById('perf-body');
+    if (!body) return;
+    const { start, end, label } = getPerfRange();
+    document.getElementById('perf-nav-label').textContent = label;
+
+    const tasks = ALL_TASKS.filter(t => {
+      if (!t.end) return false;
+      const d = parseDate(t.end);
+      return d && !isNaN(d) && d >= start && d <= end;
+    });
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const total = tasks.length;
+    const done = tasks.filter(t => t.status === '완료').length;
+    const inProgress = tasks.filter(t => t.status === '진행 중').length;
+    const overdue = tasks.filter(t => t.status !== '완료' && parseDate(t.end) < today).length;
+
+    const memberCounts = {};
+    ALL_USERS.forEach(u => { memberCounts[u.name] = 0; });
+    tasks.forEach(t => {
+      const m = t.member || '';
+      if (m) memberCounts[m] = (memberCounts[m] || 0) + 1;
+    });
+    const maxMemberCount = Math.max(1, ...Object.values(memberCounts));
+
+    const memberRows = Object.entries(memberCounts).map(([name, count]) => {
+      const pct = Math.max(count > 0 ? Math.round((count / maxMemberCount) * 100) : 0, count > 0 ? 8 : 0);
+      return `<div class="perf-member-row">
+        <div class="perf-member-name">${name}</div>
+        <div class="perf-member-bar-track"><div class="perf-member-bar-fill" style="width:${pct}%"><span>${count}</span></div></div>
+      </div>`;
+    }).join('');
+
+    const kpiStats = ALL_KPIS.map(k => {
+      const linked = tasks.filter(t => t.kpiId === k.id);
+      const kdone = linked.filter(t => t.status === '완료').length;
+      return { ...k, count: linked.length, done: kdone };
+    });
+
+    const kpiRows = kpiStats.map(k => {
+      const pct = k.count > 0 ? Math.round((k.done / k.count) * 100) : 0;
+      return `<div class="perf-kpi-card">
+        <div class="perf-kpi-top">
+          <div>
+            <div class="perf-kpi-title">${k.title}</div>
+            <div class="perf-kpi-cat">${k.category} · ${k.owner}</div>
+          </div>
+          <div class="perf-kpi-count">${k.done}/${k.count}건 완료</div>
+        </div>
+        <div class="perf-kpi-bar-track"><div class="perf-kpi-bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+
+    body.innerHTML = `
+      <div class="metrics">
+        <div class="metric-card"><div class="metric-label">전체 업무</div><div class="metric-value">${total}</div><div class="metric-sub">마감일 기준</div></div>
+        <div class="metric-card metric-green"><div class="metric-label">완료</div><div class="metric-value">${done}</div><div class="metric-sub">${total ? Math.round(done/total*100) : 0}%</div></div>
+        <div class="metric-card metric-blue"><div class="metric-label">진행 중</div><div class="metric-value">${inProgress}</div><div class="metric-sub">&nbsp;</div></div>
+        <div class="metric-card metric-red"><div class="metric-label">지연</div><div class="metric-value">${overdue}</div><div class="metric-sub">완료 안 됨</div></div>
+      </div>
+      <div class="perf-section">
+        <div class="perf-section-title">담당자별 처리 현황</div>
+        ${memberRows}
+      </div>
+      <div class="perf-section">
+        <div class="perf-section-title">KPI별 연결 현황</div>
+        ${kpiRows || '<div class="briefing-empty">KPI 데이터가 없습니다</div>'}
+      </div>`;
   }
 
   // ── 동적 멤버 탭 ──
@@ -1651,6 +1803,7 @@
       const view = document.getElementById('tab-' + tabId);
       if (view) view.classList.add('active');
       if (tabId === 'briefing') renderBriefing();
+      if (tabId === 'perf') renderPerf();
     }
   }
 
@@ -1805,6 +1958,7 @@
     }
     await loadReportSettings();
     await loadCalEvents();
+    await loadKpis();
     renderAll();
   }
   function showLoading(on) {
@@ -2298,6 +2452,13 @@
     }
   }
 
+  async function loadKpis() {
+    if (API_URL && API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+      const result = await api({ action: 'getKpis' });
+      if (result && result.kpis) ALL_KPIS = result.kpis;
+    }
+  }
+
   // ── 초기 로드 ──
   document.addEventListener('DOMContentLoaded', () => { updateWeekUI(); }, { once: true });
   window.addEventListener('DOMContentLoaded', () => {
@@ -2306,7 +2467,7 @@
     } else {
       ALL_TASKS = SAMPLE_TASKS;
       ALL_USERS = getDefaultUsers();
-      Promise.all([loadReportSettings(), loadCalEvents()]).then(() => renderAll());
+      Promise.all([loadReportSettings(), loadCalEvents(), loadKpis()]).then(() => renderAll());
     }
   });
 </script>
