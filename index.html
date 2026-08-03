@@ -2053,9 +2053,7 @@
     } else {
       ALL_USERS = getDefaultUsers();
     }
-    await loadReportSettings();
-    await loadCalEvents();
-    await loadKpis();
+    await Promise.all([loadReportSettings(), loadKpis()]);
     renderAll();
   }
   function showLoading(on) {
@@ -2564,7 +2562,7 @@
     } else {
       ALL_TASKS = SAMPLE_TASKS;
       ALL_USERS = getDefaultUsers();
-      Promise.all([loadReportSettings(), loadCalEvents(), loadKpis()]).then(() => renderAll());
+      Promise.all([loadReportSettings(), loadKpis()]).then(() => renderAll());
     }
   });
 </script>
