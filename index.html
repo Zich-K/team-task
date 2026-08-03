@@ -1471,10 +1471,6 @@
         ${memberRows}
       </div>
       <div class="perf-section">
-        <div class="perf-section-title">KPI별 연결 현황</div>
-        ${kpiRows || '<div class="briefing-empty">KPI 데이터가 없습니다</div>'}
-      </div>
-      <div class="perf-section">
         <div class="perf-section-title-row">
           <div class="perf-section-title">업무 상세 내역 (${sortedTasks.length}건)</div>
           <select class="form-select" id="perf-member-filter" style="width:120px;" onchange="renderPerf()">${memberFilterOptions}</select>
@@ -1485,6 +1481,10 @@
           </div>
           ${detailRows || '<div class="briefing-empty">해당 기간 업무가 없습니다</div>'}
         </div>
+      </div>
+      <div class="perf-section">
+        <div class="perf-section-title">KPI별 연결 현황</div>
+        ${kpiRows || '<div class="briefing-empty">KPI 데이터가 없습니다</div>'}
       </div>`;
   }
 
