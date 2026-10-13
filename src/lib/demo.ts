@@ -107,7 +107,7 @@ function makeData(): AppData & { evaluations: Evaluation[]; items: EvaluationIte
     profiles, groups: live, kpis, kpiOwners, tasks, events: [],
     holidays: ['2026-10-03', '2026-10-09', '2026-12-25'],
     reportSettings: { last: {}, this: {} },
-    reviews: [{ kpi_id: 'K5', profile_id: 'p2', year: 2026, period: 'Q3', self_grade: 'A',
+    reviews: [{ kpi_id: 'K5', profile_id: 'p2', year: 2026, period: 'Q3', self_grade: '우수',
       achievement: 'C부문 월별 트렌드 분석 자료를 매달 제때 공유했고, 9월에는 재고 회전 분석을 추가로 진행함.' }],
     evaluations: [], items: [],
   };

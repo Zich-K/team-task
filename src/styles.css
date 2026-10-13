@@ -318,8 +318,8 @@ table.tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
 .ev-item:last-child { border-bottom: none; }
 .ev-no { font-weight: 700; color: var(--text-3); text-align: right; font-variant-numeric: tabular-nums; }
 .ev-meta { font-size: 11.5px; color: var(--text-3); }
-.grade-pick { display: inline-flex; gap: 4px; }
-.grade-pick button { width: 34px; height: 30px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); font-weight: 700; font-size: 13px; color: var(--text-2); }
+.grade-pick { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.grade-pick button { min-width: 44px; padding: 0 10px; height: 30px; white-space: nowrap; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); font-weight: 700; font-size: 13px; color: var(--text-2); }
 .grade-pick button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .callout { border-radius: 10px; padding: 12px 14px; font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); }
 .callout.warn { background: var(--warn-soft); border-color: #edd3a4; color: #6b4300; }

@@ -3,7 +3,8 @@ import type { EvalPeriod, Kpi, KpiOwner, Profile, TaskView } from './types';
 import { isLongRunning, parseDate } from './logic';
 
 export const PERIODS: [EvalPeriod, string][] = [['Q1', '1분기'], ['Q2', '2분기'], ['Q3', '3분기'], ['Q4', '4분기'], ['Y', '연간']];
-export const GRADES = ['S', 'A', 'B', 'C', 'D'];
+/** 평가 등급 5단계 (높은 순) — 팀장 평가·자기평가 공통 */
+export const GRADES = ['탁월+', '탁월', '우수', '미흡', '매우미흡'];
 
 export function evalRange(year: number, period: EvalPeriod) {
   if (period === 'Y') return { start: new Date(year, 0, 1), end: new Date(year, 11, 31, 23, 59, 59, 999) };
