@@ -19,6 +19,8 @@ export interface TaskGroup {
   title: string;
   norm_key: string;
   merged_into: string | null;
+  /** 메인 업무의 기본 KPI. 서브 업무는 이 값을 따라간다 */
+  kpi_id: string | null;
 }
 
 export interface Kpi {

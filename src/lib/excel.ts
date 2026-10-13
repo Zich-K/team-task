@@ -99,7 +99,10 @@ export async function importExcel(file: File, app: App): Promise<number> {
     assignee_id: app.data.profiles.find(p => it.member && it.member.includes(p.name))?.id || null,
     status: (STATUSES.includes(it.status as Status) ? it.status : '예정') as Status,
     start_date: date(it.start), end_date: date(it.end), note: it.note,
-    kpi_id: app.data.kpis.some(k => k.id === it.kpi) ? it.kpi : null, priority: 2,
+    // KPI 칸이 비어 있으면 메인 업무의 기본 KPI 를 따른다
+    kpi_id: app.data.kpis.some(k => k.id === it.kpi) ? it.kpi
+      : app.data.groups.find(g => g.id === groupIds.get(it.main || it.sub))?.kpi_id || null,
+    priority: 2,
   })));
   await app.reload();
   return items.length;

@@ -5,16 +5,18 @@ import { normTitle, similarity } from '../lib/logic';
 import { Avatar, COLORS, Icon, Modal, Seg } from '../components/ui';
 import { exportExcel, importExcel } from '../lib/excel';
 import type { PageProps } from './Lists';
+import { KpiSuggest } from './KpiSuggest';
 
-type Tab = 'groups' | 'kpis' | 'people' | 'data';
+type Tab = 'groups' | 'link' | 'kpis' | 'people' | 'data';
 
 export function Admin(_: PageProps) {
-  const [tab, setTab] = useState<Tab>('groups');
+  const [tab, setTab] = useState<Tab>('link');
   return (
     <>
       <div className="section-head">
-        <Seg value={tab} onChange={setTab} options={[['groups', '업무명 정리'], ['kpis', 'KPI 관리'], ['people', '팀원'], ['data', '엑셀']]} />
+        <Seg value={tab} onChange={setTab} options={[['link', 'KPI 연결 정리'], ['groups', '업무명 정리'], ['kpis', 'KPI 관리'], ['people', '팀원'], ['data', '엑셀']]} />
       </div>
+      {tab === 'link' && <KpiSuggest />}
       {tab === 'groups' && <Groups />}
       {tab === 'kpis' && <Kpis />}
       {tab === 'people' && <People />}

@@ -49,7 +49,7 @@ function makeData(): AppData & { evaluations: Evaluation[]; items: EvaluationIte
     '프로세스 개선 [거래처 대시보드]', 'KPI 운영', '포상 운영', '신규입사자 교육', '재고리스크위원회',
     '경영포럼', '경영 포럼', '26년 9월 손익마감', '26년 9월 손익 마감',
   ];
-  const groups: TaskGroup[] = groupTitles.map(title => ({ id: uid(), title, norm_key: normTitle(title), merged_into: null }));
+  const groups: TaskGroup[] = groupTitles.map(title => ({ id: uid(), title, norm_key: normTitle(title), merged_into: null, kpi_id: null }));
   // 실제와 같이 띄어쓰기만 다른 묶음은 하나로 합쳐 둔 상태로 시작
   const seen = new Map<string, TaskGroup>();
   const live = groups.filter(g => (seen.has(g.norm_key) ? false : (seen.set(g.norm_key, g), true)));
@@ -103,6 +103,12 @@ function makeData(): AppData & { evaluations: Evaluation[]; items: EvaluationIte
     created_at: addDays(mon, -29).toISOString(), updated_at: addDays(mon, -29).toISOString(), deleted_at: null,
   });
 
+  // 실제 DB 와 같은 규칙: 연결된 업무가 모두 같은 KPI 인 묶음은 그 KPI 를 기본값으로
+  live.forEach(g => {
+    const ks = new Set(tasks.filter(t => t.group_id === g.id && t.kpi_id).map(t => t.kpi_id));
+    if (ks.size === 1) g.kpi_id = [...ks][0];
+  });
+
   return {
     profiles, groups: live, kpis, kpiOwners, tasks, events: [],
     holidays: ['2026-10-03', '2026-10-09', '2026-12-25'],
@@ -149,7 +155,7 @@ export const demoBackend: Backend = {
     const key = normTitle(title);
     const ex = db.groups.find(g => g.norm_key === key && !g.merged_into);
     if (ex) return ex;
-    const g: TaskGroup = { id: uid(), title: title.trim(), norm_key: key, merged_into: null };
+    const g: TaskGroup = { id: uid(), title: title.trim(), norm_key: key, merged_into: null, kpi_id: null };
     db.groups.push(g);
     return g;
   },
@@ -160,6 +166,13 @@ export const demoBackend: Backend = {
   async mergeGroups(source, target) {
     db.tasks.forEach(t => { if (t.group_id === source) t.group_id = target; });
     db.groups = db.groups.filter(g => g.id !== source);
+  },
+  async setGroupKpi(groupId, kpiId, fillEmpty) {
+    db.groups.find(g => g.id === groupId)!.kpi_id = kpiId;
+    if (fillEmpty && kpiId) db.tasks.forEach(t => { if (t.group_id === groupId && !t.kpi_id && !t.deleted_at) t.kpi_id = kpiId; });
+  },
+  async linkTasks(taskIds, kpiId) {
+    db.tasks.forEach(t => { if (taskIds.includes(t.id) && !t.kpi_id) t.kpi_id = kpiId; });
   },
   async saveReportSettings(s) { db.reportSettings = structuredClone(s); },
   async saveKpi(k, ownerIds) {

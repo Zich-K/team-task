@@ -24,6 +24,8 @@ interface Ctx {
   saveMyKpi: (k: Partial<Kpi> & { title: string }, ok?: string) => Promise<void>;
   decideKpi: (id: string, status: 'approved' | 'rejected', comment: string) => Promise<void>;
   saveReview: (r: KpiReview) => Promise<void>;
+  setGroupKpi: (groupId: string, kpiId: string | null, fillEmpty: boolean) => Promise<void>;
+  linkTasks: (taskIds: string[], kpiId: string) => Promise<void>;
   toast: (msg: string) => void;
 }
 
@@ -77,6 +79,8 @@ export function AppProvider({ backend, initial, me, children, onToast }: {
     saveMyKpi: (k, ok) => run(() => backend.saveMyKpi(k, me!.id, me?.role === 'lead'), ok || '✓ 저장되었습니다'),
     decideKpi: (id, s, c) => run(() => backend.decideKpi(id, s, c), s === 'approved' ? '✓ 승인했습니다' : '반려했습니다'),
     saveReview: r => run(() => backend.saveReview(r), '✓ 실적을 저장했습니다'),
+    setGroupKpi: (g, k, fill) => run(() => backend.setGroupKpi(g, k, fill), k ? '✓ 메인 업무 KPI 를 정했습니다' : 'KPI 지정을 풀었습니다'),
+    linkTasks: (ids, k) => run(() => backend.linkTasks(ids, k), `✓ ${ids.length}건을 ${k} 에 연결했습니다`),
     toast: onToast,
   };
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;

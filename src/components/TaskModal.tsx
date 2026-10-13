@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../lib/store';
 import { STATUSES, type Status, type TaskView } from '../lib/types';
 import { normTitle, similarity } from '../lib/logic';
@@ -12,7 +12,7 @@ export interface TaskDraft {
 }
 
 export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () => void }) {
-  const { data, views, me, saveTask, ensureGroup, deleteTask, approvedKpis } = useApp();
+  const { data, views, me, saveTask, ensureGroup, deleteTask, approvedKpis, setGroupKpi } = useApp();
   const t = draft.task;
   const [mainTitle, setMainTitle] = useState(t?.mainTitle ?? draft.mainTitle ?? '');
   const [sub, setSub] = useState(t?.sub_title ?? '');
@@ -22,6 +22,8 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
   const [end, setEnd] = useState(t?.end_date ?? '');
   const [note, setNote] = useState(t?.note ?? '');
   const [kpi, setKpi] = useState(t?.kpi_id ?? '');
+  const [kpiTouched, setKpiTouched] = useState(!!t);
+  const [applyGroup, setApplyGroup] = useState<boolean | null>(null);
   const [priority, setPriority] = useState(String(t?.priority ?? 2));
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,6 +42,14 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
     const list = data.groups.map(g => ({ g, s: q ? Math.max(similarity(q, g.title), g.norm_key.includes(normTitle(q)) ? 0.9 : 0) : 0.5 }));
     return list.filter(x => !q || x.s >= 0.35).sort((a, b) => b.s - a.s || (counts.get(b.g.id) || 0) - (counts.get(a.g.id) || 0)).slice(0, 8);
   }, [mainTitle, data.groups, counts]);
+  // 새 업무: 메인 업무를 고르면 그 메인 업무의 기본 KPI 를 따라간다 (직접 바꾸기 전까지)
+  const groupKpi = exact?.kpi_id || '';
+  useEffect(() => { if (!kpiTouched) setKpi(groupKpi); }, [groupKpi, kpiTouched]);
+  const offerGroup = !!kpi && kpi !== groupKpi;
+  // 기본은: 묶음에 기본 KPI 가 없고, 새 업무이거나 이번에 KPI 를 바꾼 경우에만 체크 (단순 수정은 묶음에 영향 없음)
+  const applyToGroup = offerGroup && (applyGroup ?? (!groupKpi && (!t || kpi !== (t.kpi_id || ''))));
+  const kpiLabel = (id: string) => { const k = data.kpis.find(x => x.id === id); return k ? `${k.id} ${k.title}` : id; };
+
   const similar = !exact && mainTitle.trim()
     ? data.groups.filter(g => similarity(mainTitle, g.title) >= 0.75).slice(0, 3) : [];
 
@@ -58,6 +68,7 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
         assignee_id: assignee || null, status, start_date: start || null, end_date: end || null,
         note: note.trim(), kpi_id: kpi || null, priority: Number(priority) || null,
       });
+      if (applyToGroup) await setGroupKpi(group_id, kpi, true);
       onClose();
     } catch { setBusy(false); }
   }
@@ -122,11 +133,15 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
       <div className="grid-2">
         <div className="field">
           <label>연결 KPI</label>
-          <select className="select" value={kpi} onChange={e => setKpi(e.target.value)}>
+          <select className="select" value={kpi} onChange={e => { setKpi(e.target.value); setKpiTouched(true); }}>
             <option value="">일상 업무 (KPI 없음)</option>
-            {kpiOptions.map(k => <option key={k.id} value={k.id}>{myKpis.has(k.id) ? '★ ' : ''}[{k.category}] {k.title}</option>)}
+            {kpiOptions.map(k => <option key={k.id} value={k.id}>{myKpis.has(k.id) ? '★ ' : ''}{k.id} {k.title}</option>)}
           </select>
-          <div className="hint">★ = 담당자의 KPI</div>
+          <div className="hint">
+            {groupKpi
+              ? (kpi === groupKpi ? `메인 업무 기본 KPI를 따릅니다` : `메인 업무 기본: ${kpiLabel(groupKpi)} — 이 업무만 다르게 지정`)
+              : '★ = 담당자의 KPI'}
+          </div>
         </div>
         <div className="field">
           <label>우선순위</label>
@@ -135,6 +150,12 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
           </select>
         </div>
       </div>
+      {offerGroup && mainTitle.trim() && (
+        <label className="row small" style={{ gap: 6, margin: '-4px 0 12px', color: 'var(--text-2)' }}>
+          <input type="checkbox" checked={applyToGroup} onChange={e => setApplyGroup(e.target.checked)} />
+          「{exact?.title || mainTitle.trim()}」의 기본 KPI로 지정 (KPI가 비어 있는 같은 묶음 업무에도 적용)
+        </label>
+      )}
       <div className="field">
         <label>비고</label>
         <textarea className="textarea" value={note} onChange={e => setNote(e.target.value)} placeholder="메모를 입력하세요" />

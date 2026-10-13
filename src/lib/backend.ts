@@ -16,6 +16,10 @@ export interface Backend {
   createGroup(title: string): Promise<TaskGroup>;
   renameGroup(id: string, title: string): Promise<void>;
   mergeGroups(source: string, target: string): Promise<void>;
+  /** 메인 업무 기본 KPI 지정. fillEmpty 면 KPI 가 비어 있는 서브 업무에도 채운다 (이미 다른 KPI 인 업무는 그대로) */
+  setGroupKpi(groupId: string, kpiId: string | null, fillEmpty: boolean): Promise<void>;
+  /** 여러 업무에 KPI 연결 (제안 적용) */
+  linkTasks(taskIds: string[], kpiId: string): Promise<void>;
   saveReportSettings(s: ReportSettings): Promise<void>;
   saveKpi(k: Kpi, ownerIds: string[]): Promise<void>;
   /** 내 KPI 작성·제출 (id 가 없으면 새로 만든다). 담당자는 만든 사람 */
@@ -94,6 +98,15 @@ export const supabaseBackend: Backend = {
   },
   async mergeGroups(source, target) {
     must(await supabase.rpc('merge_task_groups', { source, target }));
+  },
+  async setGroupKpi(groupId, kpiId, fillEmpty) {
+    must(await supabase.from('task_groups').update({ kpi_id: kpiId }).eq('id', groupId));
+    if (fillEmpty && kpiId) {
+      must(await supabase.from('tasks').update({ kpi_id: kpiId }).eq('group_id', groupId).is('kpi_id', null).is('deleted_at', null));
+    }
+  },
+  async linkTasks(taskIds, kpiId) {
+    if (taskIds.length) must(await supabase.from('tasks').update({ kpi_id: kpiId }).in('id', taskIds).is('kpi_id', null));
   },
   async saveReportSettings(s) {
     must(await supabase.from('app_settings').upsert({ key: 'report_settings', value: s, updated_at: new Date().toISOString() }));

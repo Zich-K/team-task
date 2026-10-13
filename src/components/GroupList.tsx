@@ -34,6 +34,38 @@ export function StatusPicker({ t }: { t: TaskView }) {
   );
 }
 
+/** 메인 업무의 기본 KPI 지정. 고르면 KPI 가 비어 있는 서브 업무에도 채운다 (다른 KPI 가 있는 업무는 그대로) */
+export function GroupKpiPicker({ groupId }: { groupId: string }) {
+  const { data, approvedKpis, setGroupKpi } = useApp();
+  const [at, setAt] = useState<{ x: number; y: number } | null>(null);
+  const g = data.groups.find(x => x.id === groupId);
+  if (!g) return null;
+  const k = data.kpis.find(x => x.id === g.kpi_id);
+  const pick = async (id: string | null) => { setAt(null); if (id !== g.kpi_id) await setGroupKpi(groupId, id, true); };
+  return (
+    <>
+      <span role="button" tabIndex={0} className={`gk-btn${k ? '' : ' empty'}`} title={k ? `기본 KPI: ${k.title} (눌러서 변경)` : '메인 업무 KPI 지정'}
+        onClick={e => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setAt({ x: Math.min(r.left, innerWidth - 320), y: Math.min(r.bottom + 4, innerHeight - 360) }); }}>
+        {k ? <span className="badge badge-kpi">{k.id}</span> : '+ KPI'}
+      </span>
+      {at && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 2000 }} onClick={e => { e.stopPropagation(); setAt(null); }} />
+          <div className="menu kpi-menu" style={{ left: at.x, top: at.y }} onClick={e => e.stopPropagation()}>
+            <div className="small muted" style={{ padding: '4px 8px 6px' }}>「{g.title}」 기본 KPI — KPI 없는 업무에도 적용됩니다</div>
+            <button className={!g.kpi_id ? 'on' : ''} onClick={() => pick(null)}>일상 업무 (KPI 없음)</button>
+            {approvedKpis.map(x => (
+              <button key={x.id} className={g.kpi_id === x.id ? 'on' : ''} onClick={() => pick(x.id)}>
+                <span className="badge badge-kpi">{x.id}</span> {x.title}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 /** 메인 업무별 접고 펼치는 목록. 끝난 묶음은 접힌 채로 시작 */
 export function GroupList({ tasks, showMember = true, onEdit, empty = '해당하는 업무가 없습니다', expandAll }: {
   tasks: TaskView[]; showMember?: boolean; onEdit: (t: TaskView) => void; empty?: string; expandAll?: boolean;
@@ -66,14 +98,16 @@ export function GroupList({ tasks, showMember = true, onEdit, empty = '해당하
         const owners = [...new Set(subs.map(s => s.member).filter(Boolean))];
         return (
           <div key={main} className={`gl-group${info.allDone ? ' done' : ''}`}>
-            <button className="gl-head" onClick={() => toggle(main)} aria-expanded={isOpen}>
+            <div role="button" tabIndex={0} className="gl-head" onClick={() => toggle(main)} aria-expanded={isOpen}
+              onKeyDown={e => { if (e.key === 'Enter') toggle(main); }}>
               <span className={`chev${isOpen ? ' open' : ''}`}>›</span>
               <span className="gl-title">{main}</span>
+              <GroupKpiPicker groupId={subs[0].group_id} />
               {late > 0 && <span className="badge badge-red">지연 {late}</span>}
               <span className="gl-meta hide-sm">{owners.join(', ')}</span>
               <span className="gl-meta hide-sm">{fmtYM(info.start)} ~ {fmtYM(info.end)}</span>
               <span className="gl-prog"><span className="bar"><i style={{ width: `${info.pct}%` }} /></span>{info.done}/{info.total}</span>
-            </button>
+            </div>
             {isOpen && (
               <div className="gl-body">
                 {subs.map(t => {
