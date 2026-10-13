@@ -10,6 +10,11 @@ function rng(seed: number) {
   return () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
 }
 
+const KPI_BASE: Kpi = {
+  id: '', year: 2026, category: '', title: '', owner_text: '', period: '연간', note: '', sort_order: 0, active: true,
+  status: 'approved', measure: '', target: '', weight: null, created_by: null, lead_comment: '', submitted_at: null, approved_at: null,
+};
+
 function makeData(): AppData & { evaluations: Evaluation[]; items: EvaluationItem[] } {
   const profiles: Profile[] = [
     { id: 'p1', name: '박지훈', email: 'lead@example.com', role: 'lead', color: 'purple', sort_order: 0, active: true, auth_user_id: 'demo' },
@@ -27,7 +32,14 @@ function makeData(): AppData & { evaluations: Evaluation[]; items: EvaluationIte
     ['K8', '장기프로젝트', '매입-매출-재고 모니터링 체계 구축', '공통'],
     ['K9', '장기프로젝트', '고객 활동 데이터화 프로젝트', '공통'],
     ['K10', '장기프로젝트', '주요 지표 분석 자동화 도구 개발', '공통'],
-  ].map(([id, category, title, owner_text], i) => ({ id, year: 2026, category, title, owner_text, period: '연간', note: '', sort_order: i, active: true }));
+  ].map(([id, category, title, owner_text], i) => ({ ...KPI_BASE, id, category, title, owner_text, sort_order: i }));
+  // 팀원이 작성해 제출한 개인 KPI 예시
+  kpis.push(
+    { ...KPI_BASE, id: 'P1', category: '프로세스개선', title: '월마감 리드타임 단축', owner_text: '이수진', sort_order: 10, status: 'submitted', created_by: 'p2',
+      measure: '마감 시작~확정까지 영업일 수', target: '평균 5일 → 3일', weight: 30, submitted_at: new Date().toISOString() },
+    { ...KPI_BASE, id: 'P2', category: '인재육성', title: '데이터 분석 자격 취득', owner_text: '최도윤', sort_order: 11, status: 'draft', created_by: 'p3',
+      measure: '자격 취득 여부', target: '하반기 내 1개', weight: 10 },
+  );
   const kpiOwners = kpis.flatMap(k => profiles
     .filter(p => k.owner_text.includes('공통') || k.owner_text.includes(p.name))
     .map(p => ({ kpi_id: k.id, profile_id: p.id })));
@@ -95,6 +107,8 @@ function makeData(): AppData & { evaluations: Evaluation[]; items: EvaluationIte
     profiles, groups: live, kpis, kpiOwners, tasks, events: [],
     holidays: ['2026-10-03', '2026-10-09', '2026-12-25'],
     reportSettings: { last: {}, this: {} },
+    reviews: [{ kpi_id: 'K5', profile_id: 'p2', year: 2026, period: 'Q3', self_grade: 'A',
+      achievement: 'C부문 월별 트렌드 분석 자료를 매달 제때 공유했고, 9월에는 재고 회전 분석을 추가로 진행함.' }],
     evaluations: [], items: [],
   };
 }
@@ -152,6 +166,18 @@ export const demoBackend: Backend = {
     const i = db.kpis.findIndex(x => x.id === k.id);
     if (i >= 0) db.kpis[i] = k; else db.kpis.push(k);
     db.kpiOwners = db.kpiOwners.filter(o => o.kpi_id !== k.id).concat(ownerIds.map(profile_id => ({ kpi_id: k.id, profile_id })));
+  },
+  async saveMyKpi(k, meId, _asLead) {
+    if (k.id) { Object.assign(db.kpis.find(x => x.id === k.id)!, k); return; }
+    const id = `P${db.kpis.filter(x => x.id.startsWith('P')).length + 1}`;
+    const me = db.profiles.find(p => p.id === meId)!;
+    db.kpis.push({ ...KPI_BASE, sort_order: db.kpis.length, ...k, id, created_by: meId, owner_text: me.name });
+    db.kpiOwners.push({ kpi_id: id, profile_id: meId });
+  },
+  async decideKpi(id, status, comment) { Object.assign(db.kpis.find(x => x.id === id)!, { status, lead_comment: comment }); },
+  async saveReview(r) {
+    db.reviews = db.reviews.filter(x => !(x.kpi_id === r.kpi_id && x.profile_id === r.profile_id && x.year === r.year && x.period === r.period));
+    db.reviews.push({ ...r, updated_at: now() });
   },
   async saveProfile(p) { Object.assign(db.profiles.find(x => x.id === p.id)!, p); },
   async listEvaluations() { return structuredClone({ evaluations: db.evaluations, items: db.items }); },

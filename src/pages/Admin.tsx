@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../lib/store';
-import type { Kpi, TaskGroup } from '../lib/types';
+import { KPI_STATUS_LABEL, type Kpi, type TaskGroup } from '../lib/types';
 import { normTitle, similarity } from '../lib/logic';
 import { Avatar, COLORS, Icon, Modal, Seg } from '../components/ui';
 import { exportExcel, importExcel } from '../lib/excel';
@@ -105,7 +105,11 @@ function Kpis() {
   const { data, views, isLead, saveKpi } = useApp();
   const [edit, setEdit] = useState<{ k: Kpi; owners: string[] } | null>(null);
   const year = new Date().getFullYear();
-  const blank = (): Kpi => ({ id: `K${Math.max(0, ...data.kpis.map(k => Number(k.id.slice(1)) || 0)) + 1}`, year, category: '인재육성', title: '', owner_text: '', period: '연간', note: '', sort_order: data.kpis.length, active: true });
+  const blank = (): Kpi => ({
+    id: `K${Math.max(0, ...data.kpis.filter(k => k.id.startsWith('K')).map(k => Number(k.id.slice(1)) || 0)) + 1}`, year, category: '인재육성', title: '',
+    owner_text: '', period: '연간', note: '', sort_order: data.kpis.length, active: true, status: 'approved', measure: '', target: '', weight: null,
+    created_by: null, lead_comment: '', submitted_at: null, approved_at: null,
+  });
   const ownersOf = (id: string) => data.kpiOwners.filter(o => o.kpi_id === id).map(o => o.profile_id);
   return (
     <div className="card">
@@ -117,7 +121,7 @@ function Kpis() {
           <tbody>
             {data.kpis.map(k => (
               <tr key={k.id}>
-                <td><span className="badge badge-kpi">{k.id}</span></td>
+                <td><span className="badge badge-kpi">{k.id}</span>{k.status !== 'approved' && <div className="small muted">{KPI_STATUS_LABEL[k.status]}</div>}</td>
                 <td className="small">{k.category}</td>
                 <td>{k.title}{k.note && <div className="small muted">{k.note}</div>}</td>
                 <td className="small">{ownersOf(k.id).map(id => data.profiles.find(p => p.id === id)?.name).join(', ')}</td>

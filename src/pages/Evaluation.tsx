@@ -14,7 +14,7 @@ export function Evaluation(props: PageProps) {
 }
 
 function LeadEvaluation({ onEdit }: PageProps) {
-  const { views, data, backend, toast } = useApp();
+  const { views, data, backend, toast, approvedKpis } = useApp();
   const now = new Date();
   const [member, setMember] = useState(data.profiles.find(p => p.role !== 'lead')?.id || data.profiles[0]?.id || '');
   const [year, setYear] = useState(now.getFullYear());
@@ -28,8 +28,12 @@ function LeadEvaluation({ onEdit }: PageProps) {
   const refresh = useCallback(async () => setSaved(await backend.listEvaluations()), [backend]);
   useEffect(() => { refresh(); }, [refresh]);
 
-  const evidence = useMemo(() => buildEvidence(views, data.kpis, data.kpiOwners, data.profiles, member, year, period),
+  const evidence = useMemo(() => buildEvidence(views, approvedKpis, data.kpiOwners, data.profiles, member, year, period),
     [views, data, member, year, period]);
+  const reviews = data.reviews.filter(r => r.profile_id === member && r.year === year && r.period === period);
+  const reviewText = reviews.length
+    ? '\n\n[본인 실적·자기평가]\n' + reviews.map(r => `- ${r.kpi_id}${r.self_grade ? ` (자기평가 ${r.self_grade})` : ''}: ${r.achievement}`).join('\n')
+    : '';
   const current = saved.evaluations.find(e => e.profile_id === member && e.year === year && e.period === period);
 
   useEffect(() => {
@@ -57,7 +61,7 @@ function LeadEvaluation({ onEdit }: PageProps) {
         setAi(demoAi(evidence));
       } else {
         const { data: res, error } = await supabase.functions.invoke('ai-evidence', {
-          body: { text: evidenceToText(evidence), kpis: data.kpis.map(k => ({ id: k.id, category: k.category, title: k.title })) },
+          body: { text: evidenceToText(evidence) + reviewText, kpis: approvedKpis.map(k => ({ id: k.id, category: k.category, title: k.title })) },
         });
         if (error || !res?.ok) throw new Error(res?.error || error?.message || '분석 실패');
         setAi(res.text);
@@ -154,9 +158,11 @@ function LeadEvaluation({ onEdit }: PageProps) {
               {ownedKpis.map(k => {
                 const g = grades[k.kpi.id] || { grade: null, comment: '' };
                 const set = (patch: Partial<typeof g>) => setGrades(p => ({ ...p, [k.kpi.id]: { ...g, ...patch } }));
+                const rv = reviews.find(r => r.kpi_id === k.kpi.id);
                 return (
                   <div key={k.kpi.id} className="field">
                     <label>{k.kpi.id} {k.kpi.title}</label>
+                    {rv && <div className="self-review"><b>본인 실적{rv.self_grade ? ` · 자기평가 ${rv.self_grade}` : ''}</b> {rv.achievement}</div>}
                     <div className="row">
                       <div className="grade-pick">{GRADES.map(x => <button key={x} className={g.grade === x ? 'on' : ''} onClick={() => set({ grade: g.grade === x ? null : x })}>{x}</button>)}</div>
                       <input className="input" style={{ flex: 1, minWidth: 160 }} value={g.comment} placeholder="근거 번호와 의견 (예: 3, 5번 리딩)" onChange={e => set({ comment: e.target.value })} />

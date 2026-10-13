@@ -12,7 +12,7 @@ export interface TaskDraft {
 }
 
 export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () => void }) {
-  const { data, views, me, saveTask, ensureGroup, deleteTask } = useApp();
+  const { data, views, me, saveTask, ensureGroup, deleteTask, approvedKpis } = useApp();
   const t = draft.task;
   const [mainTitle, setMainTitle] = useState(t?.mainTitle ?? draft.mainTitle ?? '');
   const [sub, setSub] = useState(t?.sub_title ?? '');
@@ -45,7 +45,7 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
 
   // 담당자의 KPI 를 위로
   const myKpis = new Set(data.kpiOwners.filter(o => o.profile_id === assignee).map(o => o.kpi_id));
-  const kpiOptions = [...data.kpis].sort((a, b) => Number(myKpis.has(b.id)) - Number(myKpis.has(a.id)) || a.sort_order - b.sort_order);
+  const kpiOptions = [...approvedKpis].sort((a, b) => Number(myKpis.has(b.id)) - Number(myKpis.has(a.id)) || a.sort_order - b.sort_order);
 
   async function save() {
     if (!mainTitle.trim()) { setErr('메인 업무명을 입력해주세요'); return; }

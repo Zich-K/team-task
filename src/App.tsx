@@ -13,10 +13,11 @@ import { Briefing } from './pages/Briefing';
 import { Perf } from './pages/Perf';
 import { Report } from './pages/Report';
 import { Evaluation } from './pages/Evaluation';
+import { MyKpi } from './pages/MyKpi';
 import { Admin } from './pages/Admin';
 import { Login } from './pages/Login';
 
-type PageId = 'dashboard' | 'members' | 'team' | 'briefing' | 'perf' | 'report' | 'eval' | 'admin';
+type PageId = 'dashboard' | 'members' | 'team' | 'briefing' | 'perf' | 'report' | 'mykpi' | 'eval' | 'admin';
 const PAGES: { id: PageId; label: string; icon: ReactNode; week?: boolean; lead?: boolean; group: string; C: (p: PageProps) => ReactNode }[] = [
   { id: 'dashboard', label: '대시보드', icon: Icon.dash, group: '업무', C: Dashboard },
   { id: 'members', label: '팀원별 업무', icon: Icon.user, group: '업무', C: Members },
@@ -24,6 +25,7 @@ const PAGES: { id: PageId; label: string; icon: ReactNode; week?: boolean; lead?
   { id: 'briefing', label: '위클리 브리핑', icon: Icon.brief, week: true, group: '업무', C: Briefing },
   { id: 'report', label: '주간 리포트', icon: Icon.report, week: true, group: '보고', C: Report },
   { id: 'perf', label: '성과 리포트', icon: Icon.chart, group: '보고', C: Perf },
+  { id: 'mykpi', label: '내 KPI', icon: Icon.target, group: '평가', C: MyKpi },
   { id: 'eval', label: 'KPI 평가', icon: Icon.star, group: '평가', C: Evaluation },
   { id: 'admin', label: '관리', icon: Icon.gear, group: '설정', C: Admin },
 ];
@@ -78,7 +80,8 @@ function NoAccess() {
 }
 
 function Shell({ me }: { me: Profile }) {
-  const { isLead, views } = useApp();
+  const { isLead, views, data } = useApp();
+  const pendingKpi = data.kpis.filter(k => k.status === 'submitted').length;
   const [page, setPage] = useState<PageId>(() => (PAGES.find(p => p.id === location.hash.slice(1))?.id) || 'dashboard');
   const [monday, setMonday] = useState(() => getMonday(new Date()));
   const [search, setSearch] = useState('');
@@ -113,7 +116,8 @@ function Shell({ me }: { me: Profile }) {
             <div key={p.id}>
               {head}
               <button className={`nav-item${p.id === page ? ' active' : ''}`} onClick={() => { setPage(p.id); setNavOpen(false); }}>
-                {p.icon}{p.id === 'eval' && !isLead ? '내 평가' : p.label}
+                {p.icon}{p.id === 'eval' && !isLead ? '내 평가' : p.id === 'mykpi' && isLead ? 'KPI 작성·승인' : p.label}
+                {p.id === 'mykpi' && isLead && pendingKpi > 0 && <span className="nav-badge">{pendingKpi}</span>}
               </button>
             </div>
           );
@@ -127,7 +131,7 @@ function Shell({ me }: { me: Profile }) {
       <div className="main">
         <header className="topbar">
           <button className="icon-btn mobile-only" onClick={() => setNavOpen(true)} aria-label="메뉴">{Icon.menu}</button>
-          <div className="page-title">{current.id === 'eval' && !isLead ? '내 평가' : current.label}</div>
+          <div className="page-title">{current.id === 'eval' && !isLead ? '내 평가' : current.id === 'mykpi' && isLead ? 'KPI 작성·승인' : current.label}</div>
           {current.week && (
             <div className="week-nav">
               <button onClick={() => setMonday(addDays(monday, -7))} aria-label="이전 주">{Icon.left}</button>
@@ -136,7 +140,7 @@ function Shell({ me }: { me: Profile }) {
               {!isThisWeek && <button className="today" onClick={() => setMonday(thisMonday)}>이번 주</button>}
             </div>
           )}
-          {!['eval', 'admin', 'report'].includes(page) && (
+          {!['eval', 'admin', 'report', 'mykpi'].includes(page) && (
             <div className="search">{Icon.search}<input className="input" placeholder="업무·담당자·KPI 검색" value={search} onChange={e => setSearch(e.target.value)} /></div>
           )}
           <button className="btn btn-primary" onClick={() => setDraft({})}>{Icon.plus}<span className="hide-sm">업무 추가</span></button>

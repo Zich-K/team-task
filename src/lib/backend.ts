@@ -1,7 +1,10 @@
 import { supabase } from './supabase';
 import type {
-  AppData, Task, TaskGroup, Kpi, ReportSettings, Profile, Evaluation, EvaluationItem, EvalPeriod, KpiOwner,
+  AppData, Task, TaskGroup, Kpi, ReportSettings, Profile, Evaluation, EvaluationItem, EvalPeriod, KpiOwner, KpiReview,
 } from './types';
+
+const KPI_FIELDS = ['year', 'category', 'title', 'owner_text', 'period', 'note', 'sort_order', 'active', 'status', 'measure', 'target', 'weight'] as const;
+const pickKpi = (k: Partial<Kpi>) => Object.fromEntries(KPI_FIELDS.filter(f => f in k).map(f => [f, (k as any)[f]]));
 
 export type TaskInput = Partial<Task> & { group_id: string };
 
@@ -15,6 +18,11 @@ export interface Backend {
   mergeGroups(source: string, target: string): Promise<void>;
   saveReportSettings(s: ReportSettings): Promise<void>;
   saveKpi(k: Kpi, ownerIds: string[]): Promise<void>;
+  /** 내 KPI 작성·제출 (id 가 없으면 새로 만든다). 담당자는 만든 사람 */
+  saveMyKpi(k: Partial<Kpi> & { title: string }, meId: string, asLead: boolean): Promise<void>;
+  /** 팀장: 승인/반려 */
+  decideKpi(id: string, status: 'approved' | 'rejected', comment: string): Promise<void>;
+  saveReview(r: KpiReview): Promise<void>;
   saveProfile(p: Pick<Profile, 'id'> & Partial<Profile>): Promise<void>;
   listEvaluations(): Promise<{ evaluations: Evaluation[]; items: EvaluationItem[] }>;
   saveEvaluation(e: { profile_id: string; year: number; period: EvalPeriod } & Partial<Evaluation>, items: Omit<EvaluationItem, 'evaluation_id'>[]): Promise<Evaluation>;
@@ -45,7 +53,7 @@ const pickTask = (t: TaskInput) => Object.fromEntries(TASK_FIELDS.filter(k => k 
 
 export const supabaseBackend: Backend = {
   async loadAll() {
-    const [profiles, groups, kpis, kpiOwners, tasks, events, holidays, settings] = await Promise.all([
+    const [profiles, groups, kpis, kpiOwners, tasks, events, holidays, settings, reviews] = await Promise.all([
       all<Profile>('profiles', q => q.order('sort_order')),
       all<TaskGroup>('task_groups', q => q.is('merged_into', null)),
       all<Kpi>('kpis', q => q.order('sort_order')),
@@ -54,10 +62,11 @@ export const supabaseBackend: Backend = {
       all<any>('calendar_events', q => q.is('deleted_at', null)),
       all<{ day: string }>('holidays'),
       all<{ key: string; value: any }>('app_settings', q => q.eq('key', 'report_settings')),
+      all<KpiReview>('kpi_reviews'),
     ]);
     const rs = settings[0]?.value || {};
     return {
-      profiles, groups, kpis, kpiOwners, tasks, events,
+      profiles, groups, kpis, kpiOwners, tasks, events, reviews,
       holidays: holidays.map(h => h.day),
       reportSettings: { last: rs.last || {}, this: rs.this || {} },
     };
@@ -90,9 +99,27 @@ export const supabaseBackend: Backend = {
     must(await supabase.from('app_settings').upsert({ key: 'report_settings', value: s, updated_at: new Date().toISOString() }));
   },
   async saveKpi(k, ownerIds) {
-    must(await supabase.from('kpis').upsert(k));
+    must(await supabase.from('kpis').upsert({ id: k.id, ...pickKpi(k) }));
     must(await supabase.from('kpi_owners').delete().eq('kpi_id', k.id));
     if (ownerIds.length) must(await supabase.from('kpi_owners').insert(ownerIds.map(profile_id => ({ kpi_id: k.id, profile_id }))));
+  },
+  async saveMyKpi(k, meId, asLead) {
+    const row = pickKpi(k);
+    if (k.id) {
+      must(await supabase.from('kpis').update(row).eq('id', k.id));
+      return;
+    }
+    const me = await supabase.from('profiles').select('name').eq('id', meId).single();
+    const created = must(await supabase.from('kpis').insert({ ...row, created_by: meId, owner_text: me.data?.name || '' }).select('id').single()) as { id: string };
+    // 팀원은 DB 가 자동으로 담당자를 넣고, 팀장은 직접 넣는다
+    if (asLead) must(await supabase.from('kpi_owners').insert({ kpi_id: created.id, profile_id: meId }));
+  },
+  async decideKpi(id, status, comment) {
+    must(await supabase.from('kpis').update({ status, lead_comment: comment }).eq('id', id));
+  },
+  async saveReview(r) {
+    const { id: _id, updated_at: _u, ...row } = r;
+    must(await supabase.from('kpi_reviews').upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: 'kpi_id,profile_id,year,period' }));
   },
   async saveProfile(p) {
     const { id, ...rest } = p;

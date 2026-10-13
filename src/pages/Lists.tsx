@@ -28,7 +28,7 @@ type Focus = 'open' | 'all' | 'doing' | 'late' | 'long' | 'done';
 const FOCUS_LABEL: Record<Focus, string> = { open: '진행·예정 업무', all: '전체 업무', doing: '진행 중', late: '마감 지남', long: '3주 이상 진행', done: '완료된 업무' };
 
 export function Dashboard({ search, onEdit }: PageProps) {
-  const { views, data } = useApp();
+  const { views, data, approvedKpis } = useApp();
   const [focus, setFocus] = useState<Focus>('open');
   const [member, setMember] = useState('');
   const [kpi, setKpi] = useState('');
@@ -143,7 +143,7 @@ export function Dashboard({ search, onEdit }: PageProps) {
         <select className="select select-sm" value={kpi} onChange={e => setKpi(e.target.value)}>
           <option value="">KPI 전체</option>
           <option value="-">일상 업무(KPI 없음)</option>
-          {data.kpis.map(k => <option key={k.id} value={k.id}>{k.id} {k.title}</option>)}
+          {approvedKpis.map(k => <option key={k.id} value={k.id}>{k.id} {k.title}</option>)}
         </select>
         <Toggle on={focus === 'all'} onChange={v => setFocus(v ? 'all' : 'open')}>완료 포함</Toggle>
       </div>

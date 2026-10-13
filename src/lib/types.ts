@@ -31,6 +31,28 @@ export interface Kpi {
   note: string;
   sort_order: number;
   active: boolean;
+  status: KpiStatus;
+  measure: string;
+  target: string;
+  weight: number | null;
+  created_by: string | null;
+  lead_comment: string;
+  submitted_at: string | null;
+  approved_at: string | null;
+}
+
+export type KpiStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
+export const KPI_STATUS_LABEL: Record<KpiStatus, string> = { draft: '작성 중', submitted: '승인 대기', approved: '승인됨', rejected: '반려' };
+
+export interface KpiReview {
+  id?: string;
+  kpi_id: string;
+  profile_id: string;
+  year: number;
+  period: EvalPeriod;
+  achievement: string;
+  self_grade: string | null;
+  updated_at?: string;
 }
 
 export interface KpiOwner {
@@ -109,4 +131,5 @@ export interface AppData {
   events: CalendarEvent[];
   holidays: string[];
   reportSettings: ReportSettings;
+  reviews: KpiReview[];
 }

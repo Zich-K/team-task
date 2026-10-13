@@ -16,7 +16,7 @@ export function periodRange(mode: 'month' | 'quarter', year: number, idx: number
 
 /** 성과 리포트 — 기존 renderPerf 와 같은 집계(마감일이 기간 안에 있는 업무) */
 export function Perf({ onEdit }: PageProps) {
-  const { views, data } = useApp();
+  const { views, data, approvedKpis } = useApp();
   const now = new Date();
   const [mode, setMode] = useState<'month' | 'quarter'>('month');
   const [year, setYear] = useState(now.getFullYear());
@@ -47,7 +47,7 @@ export function Perf({ onEdit }: PageProps) {
   const counts = data.profiles.map(p => ({ p, n: tasks.filter(t => t.assignee_id === p.id).length }));
   const max = Math.max(1, ...counts.map(c => c.n));
 
-  const kpiStats = data.kpis.map(k => {
+  const kpiStats = approvedKpis.map(k => {
     const linked = tasks.filter(t => t.kpi_id === k.id);
     return { k, linked, done: linked.filter(t => t.status === '완료').length };
   });

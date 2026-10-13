@@ -56,6 +56,7 @@ a { color: var(--info); }
 .nav-item:hover { background: var(--surface-2); color: var(--text); }
 .nav-item.active { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
 .nav-item svg { flex-shrink: 0; }
+.nav-badge { margin-left: auto; background: var(--warn); color: #fff; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 0 7px; line-height: 18px; }
 .nav-item .count { margin-left: auto; font-size: 11px; color: var(--text-3); font-weight: 500; }
 .sidebar-foot { margin-top: auto; padding: 12px 10px 0; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
 .sidebar-foot .grow { flex: 1; min-width: 0; }
@@ -260,7 +261,7 @@ table.tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
 
 /* ── 위클리 브리핑 ── */
 .brief { overflow-x: auto; }
-.brief-grid { display: grid; grid-template-columns: minmax(260px, 2.4fr) repeat(7, minmax(64px, 1fr)); min-width: 860px; }
+.brief-grid { display: grid; grid-template-columns: minmax(230px, 2.2fr) repeat(7, minmax(52px, 1fr)); min-width: 720px; }
 .brief-grid > div { border-top: 1px solid var(--border); min-height: 44px; }
 .brief-head { background: var(--surface-2); text-align: center; padding: 8px 4px; font-size: 12px; color: var(--text-2); border-top: none !important; }
 .brief-head .dow { font-size: 11px; color: var(--text-3); }
@@ -268,6 +269,14 @@ table.tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
 .brief-head.overdue { color: var(--danger); font-weight: 700; }
 .brief-head.upcoming { color: var(--info); font-weight: 700; }
 .brief-task { display: flex; align-items: center; gap: 8px; padding: 6px 14px; min-width: 0; }
+.brief-person { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--surface-2); border-top: 1px solid var(--border-strong) !important; min-height: 0 !important; }
+.brief-person.m { border: none; background: none; padding: 8px 2px 2px; }
+.brief-task .bt-main { flex: 1; min-width: 0; display: flex; flex-direction: column; cursor: pointer; }
+.brief-task.is-late .t { color: var(--danger); }
+.brief-cell.c-late { background: rgba(180, 35, 24, .03); }
+.chip { display: inline-flex; align-items: center; gap: 5px; }
+.chip-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip-on:hover { background: var(--accent-hover); }
 .brief-task .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; font-size: 13px; }
 .brief-task .t:hover { text-decoration: underline; }
 .brief-task .t.done { color: var(--text-3); }
@@ -315,6 +324,11 @@ table.tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
 .callout { border-radius: 10px; padding: 12px 14px; font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); }
 .callout.warn { background: var(--warn-soft); border-color: #edd3a4; color: #6b4300; }
 .callout.info { background: var(--info-soft); border-color: #c4d6f2; color: #173d75; }
+.review-row { padding: 12px 0; border-bottom: 1px dashed var(--border); }
+.review-row:last-child { border-bottom: none; }
+.late-t { color: var(--danger) !important; }
+.self-review { font-size: 12.5px; background: var(--info-soft); color: #173d75; border-radius: 8px; padding: 7px 10px; margin-bottom: 7px; white-space: pre-wrap; }
+.self-review b { font-weight: 700; margin-right: 4px; }
 .ai-box { white-space: pre-wrap; font-size: 13px; line-height: 1.65; }
 
 /* ── 주간 리포트 ── */
@@ -364,7 +378,7 @@ table.tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
   .search { flex: 1 1 100%; order: 10; }
   .two-col { grid-template-columns: 1fr; }
 }
-@media (max-width: 1100px) { .metrics-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .metrics-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 720px) {
   .metrics-5 { grid-template-columns: 1fr 1fr; }
   .gl-row { grid-template-columns: minmax(0, 1fr) auto; padding-left: 16px; }
