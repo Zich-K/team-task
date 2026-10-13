@@ -95,5 +95,5 @@ export function GroupedTable({ tasks, cols, showDone = true, onEdit, empty = 'ë“
 
 function Tip({ x, y, text, onDone }: { x: number; y: number; text: string; onDone: () => void }) {
   useEffect(() => { const id = setTimeout(onDone, 2500); return () => clearTimeout(id); }, [x, y, onDone]);
-  return <div className="tooltip" style={{ left: x + 12, top: y - 34, background: '#880e4f' }}>{text}</div>;
+  return <div className="tooltip" style={{ left: x + 12, top: y - 34, background: 'var(--danger)' }}>{text}</div>;
 }

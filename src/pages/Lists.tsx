@@ -63,7 +63,7 @@ function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (
             return (
               <div key={p.id} className="hbar-row">
                 <span className="who"><Avatar name={p.name} color={p.color} size={18} />{p.name}</span>
-                <span className="hbar"><i style={{ width: `${pct}%`, background: '#6a4fc4' }} /></span>
+                <span className="hbar"><i style={{ width: `${pct}%`, background: 'var(--gray-500)' }} /></span>
                 <span className="small muted">{pct}%</span>
               </div>
             );

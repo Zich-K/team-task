@@ -108,9 +108,9 @@ function Shell({ me }: { me: Profile }) {
   return (
     <div className="app">
       <header className="header">
-        <div className="header-top">
+        <div className="header-top-wrap"><div className="header-top">
           <div className="brand">
-            <div className="brand-mark">{Icon.dash}</div>
+            <img className="brand-logo" src={`${import.meta.env.BASE_URL}logo-mark.png`} alt="대원씨티에스" />
             <div className="hide-sm"><div className="brand-name">팀 업무 관리</div>
               <div className="brand-sub">진행 중 {open.length}건{IS_DEMO ? ' · 예시 데이터' : ''}</div></div>
           </div>
@@ -132,12 +132,16 @@ function Shell({ me }: { me: Profile }) {
                 <div style={{ position: 'fixed', inset: 0, zIndex: 150 }} onClick={() => setUserMenu(false)} />
                 <div className="menu user-menu">
                   <div style={{ padding: '6px 8px' }}><b>{me.name}</b><div className="small muted">{me.role === 'lead' ? '팀장' : '팀원'}{me.email ? ` · ${me.email}` : ''}</div></div>
+                  {(window as any).__installPrompt && (
+                    <button onClick={async () => { const p = (window as any).__installPrompt; (window as any).__installPrompt = null; setUserMenu(false); await p.prompt(); }}>이 기기에 앱으로 설치</button>
+                  )}
+                  <a className="menu-link" href={`${import.meta.env.BASE_URL}install.html`}>휴대폰 홈 화면에 추가하는 방법</a>
                   {!IS_DEMO && <button onClick={() => supabase.auth.signOut()}>로그아웃</button>}
                 </div>
               </>
             )}
           </div>
-        </div>
+        </div></div>
         <nav className="tabs" aria-label="메뉴">
           {PAGES.map(p => (
             <button key={p.id} className={`tab${p.id === page ? ' active' : ''}${p.id === 'admin' ? ' tab-end' : ''}`} onClick={() => setPage(p.id)}>

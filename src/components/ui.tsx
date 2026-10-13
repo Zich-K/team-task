@@ -2,20 +2,25 @@ import { useEffect, type ReactNode } from 'react';
 import type { Status } from '../lib/types';
 
 export const COLOR_MAP: Record<string, { bg: string; text: string }> = {
-  purple: { bg: '#f0ecfc', text: '#4a2d8a' },
-  blue: { bg: '#e8eef7', text: '#1a3f6b' },
-  green: { bg: '#eaf3e8', text: '#2d5a27' },
-  amber: { bg: '#fdf3e3', text: '#7a4a10' },
-  pink: { bg: '#fce4ec', text: '#880e4f' },
-  teal: { bg: '#e1f5ee', text: '#0f6e56' },
+  // 회사 CI 색 체계 안에서 사람을 구분 (저장된 이름은 그대로, 색만 차분하게)
+  purple: { bg: '#edf0f3', text: '#25282b' },
+  blue: { bg: '#eaeef2', text: '#3a5068' },
+  green: { bg: '#eaf2ed', text: '#2f6b4f' },
+  amber: { bg: '#f5f0e6', text: '#8a6a2f' },
+  pink: { bg: '#f7ecec', text: '#9b3b36' },
+  teal: { bg: '#c5c8cb', text: '#25282b' },
 };
 export const COLORS = Object.keys(COLOR_MAP);
+
+/** 아바타 글자: 세 글자 한글 이름은 이름 첫 글자(김승현 → 승). 성이 같은 팀원끼리 구분되게 */
+export const initial = (name: string) =>
+  !name ? '?' : /^[가-힣]{3}$/.test(name) ? name[1] : name[0];
 
 export function Avatar({ name, color, size = 22 }: { name: string; color?: string; size?: number }) {
   const c = COLOR_MAP[color || 'purple'] || COLOR_MAP.purple;
   return (
     <span className="av" style={{ width: size, height: size, background: c.bg, color: c.text, fontSize: Math.floor(size * 0.46) }}>
-      {(name || '?')[0]}
+      {initial(name)}
     </span>
   );
 }

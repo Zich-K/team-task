@@ -74,7 +74,7 @@ export function MyKpi(_: PageProps) {
       </div>
 
       {isLead && pending.length > 0 && (
-        <div className="card" style={{ marginBottom: 18, borderColor: '#edd3a4' }}>
+        <div className="card" style={{ marginBottom: 18, borderColor: 'var(--warn-line)' }}>
           <div className="card-head"><span className="card-title">승인 대기 ({pending.length})</span><span className="card-sub">팀원이 제출한 KPI</span></div>
           <div className="card-pad">{pending.map(k => <Decide key={k.id} k={k} name={data.profiles.find(p => p.id === k.created_by)?.name || ''} onDecide={decideKpi} />)}</div>
         </div>

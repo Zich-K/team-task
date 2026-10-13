@@ -93,7 +93,7 @@ export function Perf({ onEdit }: PageProps) {
             return (
               <div key={p.id} className="hbar-row">
                 <span>{p.name}</span>
-                <span className="hbar"><i style={{ width: `${pct}%`, background: '#6a4fc4' }} /></span>
+                <span className="hbar"><i style={{ width: `${pct}%`, background: 'var(--gray-500)' }} /></span>
                 <span className="small muted">{pct}%</span>
               </div>
             );

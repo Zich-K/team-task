@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Icon } from '../components/ui';
 
 /** 이메일 + 비밀번호 로그인. 처음 사용하는 팀원은 '처음 사용' 에서 비밀번호를 만든다 (팀원 명단에 등록된 이메일만 가능). */
 export function Login() {
@@ -34,7 +33,7 @@ export function Login() {
   return (
     <div className="auth-wrap">
       <form className="card auth-card" onSubmit={submit}>
-        <div className="brand-mark" style={{ width: 40, height: 40 }}>{Icon.dash}</div>
+        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="대원씨티에스" style={{ width: 48, height: 48, borderRadius: 12, display: 'block' }} />
         <h1>팀 업무 관리</h1>
         <p className="lead">{mode === 'login' ? '회사 이메일로 로그인하세요' : '처음 사용하시나요? 팀장이 등록한 이메일로 비밀번호를 만드세요'}</p>
         <div className="field"><label>이메일</label><input className="input" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>
