@@ -3,3 +3,4 @@ dist
 .env.local
 scripts/out
 tsconfig.tsbuildinfo
+dist-v2
