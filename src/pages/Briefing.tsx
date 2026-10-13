@@ -14,7 +14,7 @@ type Focus = '' | 'late' | 'today' | 'week' | 'later' | 'done';
 
 /** 위클리 브리핑 — 기존 규칙 유지: [지연, 월~금, 예정] 7칸에 마감일 기준 배치, 완료는 그 주 마감분만 */
 export function Briefing({ monday, search, onEdit }: PageProps) {
-  const { views, data, saveTask } = useApp();
+  const { views, data, saveTask, people } = useApp();
   const [member, setMember] = useState('');
   const [focus, setFocus] = useState<Focus>('');
   const [memo, setMemo] = useState<{ t: TaskView; x: number; y: number; text: string } | null>(null);
@@ -113,7 +113,7 @@ export function Briefing({ monday, search, onEdit }: PageProps) {
 
       <div className="section-head">
         <button className={`chip${!member ? ' chip-on' : ''}`} onClick={() => setMember('')}>전체 {rows.filter(r => !r.done).length}</button>
-        {data.profiles.map(p => (
+        {people.map(p => (
           <button key={p.id} className={`chip${member === p.id ? ' chip-on' : ''}`} onClick={() => setMember(member === p.id ? '' : p.id)}>
             <Avatar name={p.name} color={p.color} size={16} /> {p.name} {rows.filter(r => !r.done && r.t.assignee_id === p.id).length}
           </button>

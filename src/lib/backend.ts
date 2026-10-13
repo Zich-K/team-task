@@ -28,6 +28,9 @@ export interface Backend {
   decideKpi(id: string, status: 'approved' | 'rejected', comment: string): Promise<void>;
   saveReview(r: KpiReview): Promise<void>;
   saveProfile(p: Pick<Profile, 'id'> & Partial<Profile>): Promise<void>;
+  addProfile(p: Pick<Profile, 'name' | 'email' | 'role' | 'color'>): Promise<void>;
+  /** 팀장: 로그인 초기화 (비밀번호 분실 시). 기록은 유지 */
+  resetLogin(profileId: string): Promise<void>;
   listEvaluations(): Promise<{ evaluations: Evaluation[]; items: EvaluationItem[] }>;
   saveEvaluation(e: { profile_id: string; year: number; period: EvalPeriod } & Partial<Evaluation>, items: Omit<EvaluationItem, 'evaluation_id'>[]): Promise<Evaluation>;
   taskHistory(taskId: string): Promise<{ changed_at: string; changed_by: string | null; before: unknown; after: unknown }[]>;
@@ -133,6 +136,14 @@ export const supabaseBackend: Backend = {
   async saveReview(r) {
     const { id: _id, updated_at: _u, ...row } = r;
     must(await supabase.from('kpi_reviews').upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: 'kpi_id,profile_id,year,period' }));
+  },
+  async addProfile(p) {
+    const { data: last } = await supabase.from('profiles').select('sort_order').order('sort_order', { ascending: false }).limit(1).maybeSingle();
+    must(await supabase.from('profiles').insert({ ...p, email: p.email?.trim().toLowerCase() || null, sort_order: (last?.sort_order ?? 0) + 1 }));
+  },
+  async resetLogin(profileId) {
+    const { data, error } = await supabase.functions.invoke('reset-login', { body: { profileId } });
+    if (error || !data?.ok) throw new Error(data?.error || error?.message || '초기화 실패');
   },
   async saveProfile(p) {
     const { id, ...rest } = p;

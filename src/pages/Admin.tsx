@@ -104,7 +104,7 @@ function Groups() {
 }
 
 function Kpis() {
-  const { data, views, isLead, saveKpi } = useApp();
+  const { data, views, isLead, saveKpi, people } = useApp();
   const [edit, setEdit] = useState<{ k: Kpi; owners: string[] } | null>(null);
   const year = new Date().getFullYear();
   const blank = (): Kpi => ({
@@ -153,7 +153,7 @@ function Kpis() {
           </div>
           <div className="field"><label>KPI 내용</label><input className="input" value={edit.k.title} onChange={e => setEdit({ ...edit, k: { ...edit.k, title: e.target.value } })} /></div>
           <div className="field"><label>담당자</label>
-            <div className="row">{data.profiles.map(p => (
+            <div className="row">{people.map(p => (
               <label key={p.id} className="row small" style={{ gap: 5 }}>
                 <input type="checkbox" checked={edit.owners.includes(p.id)} onChange={e => setEdit({ ...edit, owners: e.target.checked ? [...edit.owners, p.id] : edit.owners.filter(x => x !== p.id) })} />{p.name}
               </label>))}</div></div>
@@ -165,35 +165,92 @@ function Kpis() {
 }
 
 function People() {
-  const { data, backend, reload, toast, isLead } = useApp();
-  async function save(id: string, patch: Record<string, unknown>) {
-    try { await backend.saveProfile({ id, ...patch }); await reload(); toast('✓ 저장되었습니다'); }
-    catch (e: any) { toast('실패: ' + e.message); }
+  const { data, views, backend, reload, toast, isLead, me } = useApp();
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', role: 'member' as 'lead' | 'member', color: 'teal' });
+
+  async function save(id: string, patch: Record<string, unknown>, ok = '✓ 저장되었습니다') {
+    try { await backend.saveProfile({ id, ...patch }); await reload(); toast(ok); }
+    catch (e: any) { toast('실패: ' + (e.message || e)); await reload(); }
   }
+  async function add() {
+    const email = form.email.trim().toLowerCase();
+    if (!form.name.trim()) { toast('이름을 입력해주세요'); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast('이메일 형식을 확인해주세요'); return; }
+    if (data.profiles.some(p => p.email?.toLowerCase() === email)) { toast('이미 등록된 이메일입니다'); return; }
+    try {
+      await backend.addProfile({ name: form.name.trim(), email, role: form.role, color: form.color });
+      await reload(); toast(`✓ ${form.name} 님을 추가했습니다`);
+      setAdding(false); setForm({ name: '', email: '', role: 'member', color: 'teal' });
+    } catch (e: any) { toast('실패: ' + (e.message || e)); }
+  }
+  async function resetLogin(id: string, name: string) {
+    if (!confirm(`${name} 님의 로그인을 초기화할까요?\n업무·KPI·평가 기록은 그대로 남고, ${name} 님은 로그인 화면의 「처음 사용하시나요?」에서 비밀번호를 다시 만들면 됩니다.`)) return;
+    try { await backend.resetLogin(id); await reload(); toast('✓ 로그인을 초기화했습니다'); }
+    catch (e: any) { toast('실패: ' + (e.message || e)); }
+  }
+  const openCount = (id: string) => views.filter(t => t.assignee_id === id && t.status !== '완료').length;
+
   return (
-    <div className="card">
-      <div className="card-head"><span className="card-title">팀원</span><span className="card-sub">로그인은 여기 등록된 이메일로만 가능합니다</span></div>
-      <div className="table-wrap">
-        <table className="tbl">
-          <thead><tr><th>이름</th><th>역할</th><th>로그인 이메일</th><th>색</th><th>가입</th></tr></thead>
-          <tbody>
-            {data.profiles.map(p => (
-              <tr key={p.id}>
-                <td><span className="who"><Avatar name={p.name} color={p.color} />{p.name}</span></td>
-                <td className="small">{p.role === 'lead' ? '팀장' : '팀원'}</td>
-                <td>{isLead
-                  ? <input className="input" defaultValue={p.email || ''} placeholder="회사 이메일" onBlur={e => { const v = e.target.value.trim(); if (v !== (p.email || '')) save(p.id, { email: v || null }); }} />
-                  : <span className="small">{p.email}</span>}</td>
-                <td>{isLead
-                  ? <select className="select select-sm" value={p.color} onChange={e => save(p.id, { color: e.target.value })}>{COLORS.map(c => <option key={c}>{c}</option>)}</select>
-                  : p.color}</td>
-                <td className="small">{p.auth_user_id ? '✓ 가입함' : <span className="muted">아직</span>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <>
+      <div className="callout info" style={{ marginBottom: 14 }}>
+        로그인은 여기 등록된 이메일로만 할 수 있습니다. 새 팀원은 추가 후 로그인 화면의 <b>「처음 사용하시나요?」</b>에서 직접 비밀번호를 만들면 됩니다.
+        퇴사·이동한 팀원은 <b>비활성</b>으로 바꾸면 로그인과 담당자 목록에서 빠지고, 지난 업무·평가 기록은 그대로 남습니다.
       </div>
-    </div>
+      <div className="card">
+        <div className="card-head"><span className="card-title">팀원 ({data.profiles.filter(p => p.active).length}명)</span><span className="spacer" />
+          {isLead && <button className="btn btn-primary btn-sm" onClick={() => setAdding(true)}>+ 팀원 추가</button>}</div>
+        <div className="people-admin">
+          {data.profiles.map(p => (
+            <div key={p.id} className={`pa-row${p.active ? '' : ' inactive'}`}>
+              <div className="pa-who">
+                <Avatar name={p.name} color={p.color} size={32} />
+                <div style={{ minWidth: 0 }}>
+                  <div><b>{p.name}</b>{p.id === me?.id && <span className="small muted"> (나)</span>}{!p.active && <span className="badge badge-soft" style={{ marginLeft: 6 }}>비활성</span>}</div>
+                  <div className="small muted">진행 중 업무 {openCount(p.id)}건 · {p.auth_user_id ? '✓ 가입함' : '아직 가입 전'}</div>
+                </div>
+              </div>
+              {isLead ? (
+                <div className="pa-fields">
+                  <label><span>역할</span>
+                    <select className="select select-sm" value={p.role} onChange={e => save(p.id, { role: e.target.value }, e.target.value === 'lead' ? `✓ ${p.name} 님을 팀장으로 지정했습니다` : '✓ 팀원으로 바꿨습니다')}>
+                      <option value="lead">팀장</option><option value="member">팀원</option>
+                    </select></label>
+                  <label className="pa-email"><span>로그인 이메일</span>
+                    <input className="input" defaultValue={p.email || ''} placeholder="회사 이메일" disabled={!!p.auth_user_id}
+                      title={p.auth_user_id ? '가입 후에는 바꿀 수 없습니다. 바꾸려면 로그인 초기화 후 수정하세요' : ''}
+                      onBlur={e => { const v = e.target.value.trim().toLowerCase(); if (v !== (p.email || '')) save(p.id, { email: v || null }); }} /></label>
+                  <label><span>색</span>
+                    <select className="select select-sm" value={p.color} onChange={e => save(p.id, { color: e.target.value })}>{COLORS.map(c => <option key={c}>{c}</option>)}</select></label>
+                  <div className="pa-actions">
+                    {p.auth_user_id && p.id !== me?.id && <button className="btn btn-sm" onClick={() => resetLogin(p.id, p.name)}>로그인 초기화</button>}
+                    {p.id !== me?.id && (p.active
+                      ? <button className="btn btn-sm btn-danger" onClick={() => { if (confirm(`${p.name} 님을 비활성으로 바꿀까요?\n진행 중 업무 ${openCount(p.id)}건은 그대로 남으니 필요하면 담당자를 바꿔주세요.`)) save(p.id, { active: false }, '비활성으로 바꿨습니다'); }}>비활성</button>
+                      : <button className="btn btn-sm" onClick={() => save(p.id, { active: true }, '✓ 다시 활성화했습니다')}>다시 활성화</button>)}
+                  </div>
+                </div>
+              ) : (
+                <div className="small muted">{p.role === 'lead' ? '팀장' : '팀원'} · {p.email}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      {adding && (
+        <Modal title="팀원 추가" onClose={() => setAdding(false)}
+          actions={<><button className="btn" onClick={() => setAdding(false)}>취소</button><button className="btn btn-primary" onClick={add}>추가</button></>}>
+          <div className="field"><label>이름</label><input className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} autoFocus /></div>
+          <div className="field"><label>회사 이메일 (로그인에 사용)</label><input className="input" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="name@computer.co.kr" /></div>
+          <div className="grid-2">
+            <div className="field"><label>역할</label>
+              <select className="select" value={form.role} onChange={e => setForm({ ...form, role: e.target.value as 'lead' | 'member' })}><option value="member">팀원</option><option value="lead">팀장</option></select></div>
+            <div className="field"><label>색</label>
+              <select className="select" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })}>{COLORS.map(c => <option key={c}>{c}</option>)}</select></div>
+          </div>
+          <div className="small muted">추가한 뒤 그 팀원에게 사이트 주소와 「처음 사용하시나요?」로 비밀번호를 만들라고 알려주세요.</div>
+        </Modal>
+      )}
+    </>
   );
 }
 

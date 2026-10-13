@@ -8,6 +8,8 @@ interface Ctx {
   data: AppData;
   views: TaskView[];
   me: Profile | null;
+  /** 현재 활동 중인 팀원 (비활성 팀원은 목록·선택에서 빠지고, 지난 기록에는 이름이 남는다) */
+  people: Profile[];
   isLead: boolean;
   holidays: Set<string>;
   profileName: (id: string | null) => string;
@@ -68,6 +70,7 @@ export function AppProvider({ backend, initial, me, children, onToast }: {
   const value: Ctx = {
     backend, data, views, me, holidays, profileName, reload, ensureGroup,
     isLead: me?.role === 'lead',
+    people: data.profiles.filter(p => p.active),
     saveTask: (t, opts) => {
       if (t.id) setData(d => ({ ...d, tasks: d.tasks.map(x => (x.id === t.id ? { ...x, ...t } : x)) }));
       return run(() => backend.saveTask(t), opts?.quiet ? undefined : '✓ 저장되었습니다');

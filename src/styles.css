@@ -212,6 +212,20 @@ a { color: var(--info); }
 
 .suggest-row { padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 13px; cursor: pointer; }
 .suggest-row:last-of-type { border-bottom: none; }
+.people-admin { display: flex; flex-direction: column; }
+.pa-row { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.pa-row:last-child { border-bottom: none; }
+.pa-row.inactive { background: var(--surface-2); opacity: .75; }
+.pa-who { display: flex; align-items: center; gap: 10px; min-width: 200px; flex: 1; }
+.pa-fields { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.pa-fields label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--text-3); }
+.pa-email .input { width: 230px; }
+.pa-actions { display: flex; gap: 6px; }
+@media (max-width: 720px) {
+  .pa-fields { width: 100%; }
+  .pa-email { flex: 1 1 100%; }
+  .pa-email .input { width: 100%; }
+}
 .gk-btn { font-size: 11.5px; cursor: pointer; flex-shrink: 0; }
 .gk-btn.empty { color: var(--text-3); border: 1px dashed var(--border-strong); border-radius: 99px; padding: 1px 8px; }
 .gk-btn.empty:hover { color: var(--accent); border-color: var(--accent); }

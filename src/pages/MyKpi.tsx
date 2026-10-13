@@ -13,7 +13,7 @@ type Draft = Partial<Kpi> & { title: string };
 
 /** 내 KPI: 팀원이 직접 KPI 를 작성·제출하고, 팀장이 승인. 분기마다 KPI 별 실적·자기평가 작성 */
 export function MyKpi(_: PageProps) {
-  const { data, me, isLead, views, approvedKpis, saveMyKpi, decideKpi } = useApp();
+  const { data, me, isLead, views, approvedKpis, saveMyKpi, decideKpi, people } = useApp();
   const now = new Date();
   const [who, setWho] = useState(me?.id || '');
   const [year, setYear] = useState(now.getFullYear());
@@ -61,7 +61,7 @@ export function MyKpi(_: PageProps) {
   return (
     <>
       <div className="section-head">
-        {isLead && data.profiles.map(p => (
+        {isLead && people.map(p => (
           <button key={p.id} className={`btn btn-sm${who === p.id ? ' btn-primary' : ''}`} onClick={() => setWho(p.id)}>
             <Avatar name={p.name} color={p.color} size={18} />{p.name}
             {pending.some(k => k.created_by === p.id) && <span className="badge badge-보류" style={{ padding: '0 6px' }}>대기</span>}

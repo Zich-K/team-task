@@ -192,7 +192,19 @@ export const demoBackend: Backend = {
     db.reviews = db.reviews.filter(x => !(x.kpi_id === r.kpi_id && x.profile_id === r.profile_id && x.year === r.year && x.period === r.period));
     db.reviews.push({ ...r, updated_at: now() });
   },
-  async saveProfile(p) { Object.assign(db.profiles.find(x => x.id === p.id)!, p); },
+  async saveProfile(p) {
+    const cur = db.profiles.find(x => x.id === p.id)!;
+    const next = { ...cur, ...p };
+    if (cur.role === 'lead' && cur.active && (next.role !== 'lead' || !next.active)
+      && !db.profiles.some(x => x.id !== cur.id && x.role === 'lead' && x.active)) {
+      throw new Error('팀장이 최소 1명은 있어야 합니다. 다른 사람을 먼저 팀장으로 지정하세요');
+    }
+    Object.assign(cur, p);
+  },
+  async addProfile(p) {
+    db.profiles.push({ id: uid(), auth_user_id: null, active: true, sort_order: db.profiles.length, ...p });
+  },
+  async resetLogin(profileId) { db.profiles.find(x => x.id === profileId)!.auth_user_id = null; },
   async listEvaluations() { return structuredClone({ evaluations: db.evaluations, items: db.items }); },
   async saveEvaluation(e, items) {
     let ev = db.evaluations.find(x => x.profile_id === e.profile_id && x.year === e.year && x.period === e.period);

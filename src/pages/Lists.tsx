@@ -31,7 +31,7 @@ const FOCUS_LABEL: Record<Focus, string> = { open: '진행·예정 업무', all:
 
 /** 대시보드 KPI 현황: 올해 KPI 별 연결 업무·완료, 이번 분기 진행, 사람별 연계율. KPI 를 누르면 아래 목록이 그 KPI 업무로 걸러진다 */
 function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (id: string) => void; go: (p: string) => void }) {
-  const { views, data, approvedKpis, isLead, me } = useApp();
+  const { views, data, approvedKpis, isLead, me, people } = useApp();
   const now = new Date();
   const year = now.getFullYear();
   const q = Math.floor(now.getMonth() / 3);
@@ -56,7 +56,7 @@ function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (
       <div className="kpi-ov">
         <div className="kpi-ov-people">
           <div className="small muted" style={{ marginBottom: 8 }}>이번 분기 KPI 연계율</div>
-          {data.profiles.map(p => {
+          {people.map(p => {
             const mine = qTasks.filter(t => t.assignee_id === p.id);
             const linked = mine.filter(t => t.kpi_id).length;
             const pct = mine.length ? Math.round(linked / mine.length * 100) : 0;
@@ -99,7 +99,7 @@ function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (
 }
 
 export function Dashboard({ search, onEdit, go }: PageProps) {
-  const { views, data, approvedKpis } = useApp();
+  const { views, data, approvedKpis, people } = useApp();
   const [focus, setFocus] = useState<Focus>('open');
   const [member, setMember] = useState('');
   const [kpi, setKpi] = useState('');
@@ -176,7 +176,7 @@ export function Dashboard({ search, onEdit, go }: PageProps) {
         <div className="card">
           <div className="card-head"><span className="card-title">팀원별 현황</span><span className="card-sub">누르면 그 사람 업무만 봅니다</span></div>
           <div className="card-pad people">
-            {data.profiles.map(p => {
+            {people.map(p => {
               const mine = views.filter(t => t.assignee_id === p.id);
               const open = mine.filter(t => t.status !== '완료');
               const late = mine.filter(isLate).length;
@@ -230,7 +230,7 @@ export function Dashboard({ search, onEdit, go }: PageProps) {
 }
 
 export function Members({ search, onEdit, onAdd }: PageProps) {
-  const { views, data, me } = useApp();
+  const { views, data, me, people } = useApp();
   const [sel, setSel] = useState(me?.id || data.profiles[0]?.id || '');
   const [showDone, setShowDone] = useState(false);
   const searched = useSearch(views, search);
@@ -242,7 +242,7 @@ export function Members({ search, onEdit, onAdd }: PageProps) {
   return (
     <>
       <div className="row" style={{ marginBottom: 16 }}>
-        {data.profiles.map(p => (
+        {people.map(p => (
           <button key={p.id} className={`btn${sel === p.id ? ' btn-primary' : ''}`} onClick={() => setSel(p.id)}>
             <Avatar name={p.name} color={p.color} size={20} />{p.name}
             <span className="small" style={{ opacity: .7 }}>{views.filter(t => t.assignee_id === p.id && t.status !== '완료').length}</span>
