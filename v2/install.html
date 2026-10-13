@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#25282B">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<title>팀 업무 관리 - 설치</title>
+<!-- 기존 사이트의 install.html 과 같은 역할 (앱 열기 + 홈 화면 추가 안내). 주소는 이 페이지 위치 기준으로 계산 -->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: linear-gradient(160deg, #25282b 0%, #4d5053 55%, #2f3336 100%); color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; }
+  .logo { width: 96px; height: 96px; border-radius: 22px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: rgba(255,255,255,.65); margin-bottom: 32px; letter-spacing: .08em; }
+  .open-btn { display: block; text-align: center; text-decoration: none; background: #fff; color: #25282b; border-radius: 12px; padding: 16px 40px; font-size: 16px; font-weight: 700; width: 100%; max-width: 360px; margin-bottom: 14px; }
+  .url-box { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 12px 16px; margin-bottom: 32px; display: flex; align-items: center; gap: 10px; width: 100%; max-width: 360px; }
+  .url-text { font-size: 12px; color: rgba(255,255,255,.75); flex: 1; word-break: break-all; }
+  .copy-btn { background: rgba(255,255,255,.15); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .steps { width: 100%; max-width: 360px; }
+  .steps-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .os-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+  .os-tab { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: rgba(255,255,255,.7); font-size: 13px; cursor: pointer; text-align: center; font-family: inherit; }
+  .os-tab.active { background: #fff; border-color: #fff; color: #25282b; font-weight: 700; }
+  .step-list { display: none; flex-direction: column; gap: 14px; }
+  .step-list.active { display: flex; }
+  .step { display: flex; gap: 12px; align-items: flex-start; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .step-text { font-size: 13.5px; color: rgba(255,255,255,.82); line-height: 1.6; padding-top: 3px; }
+  .step-text strong { color: #fff; }
+</style>
+</head>
+<body>
+  <img class="logo" src="logo.png" alt="대원씨티에스">
+  <h1>팀 업무 관리</h1>
+  <p class="subtitle">DAEWON CTS</p>
+
+  <a class="open-btn" id="open" href="./">앱 열기</a>
+
+  <div class="url-box">
+    <span class="url-text" id="url"></span>
+    <button class="copy-btn" id="copy">복사</button>
+  </div>
+
+  <div class="steps">
+    <div class="steps-title">홈 화면에 추가하기</div>
+    <div class="os-tabs">
+      <button class="os-tab active" data-os="android">안드로이드</button>
+      <button class="os-tab" data-os="ios">아이폰</button>
+    </div>
+    <div class="step-list active" id="android">
+      <div class="step"><div class="step-num">1</div><div class="step-text">크롬에서 <strong>앱 열기</strong>를 눌러 로그인</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">오른쪽 위 <strong>⋮</strong> 버튼</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text"><strong>홈 화면에 추가</strong> (또는 <strong>앱 설치</strong>) 선택</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text"><strong>추가</strong>를 누르면 홈 화면에 회사 로고 아이콘이 생깁니다</div></div>
+    </div>
+    <div class="step-list" id="ios">
+      <div class="step"><div class="step-num">1</div><div class="step-text"><strong>사파리</strong>에서 <strong>앱 열기</strong>를 눌러 로그인</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">아래쪽 <strong>공유 버튼 (□↑)</strong></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text"><strong>홈 화면에 추가</strong> 선택</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">오른쪽 위 <strong>추가</strong>를 누르면 완료</div></div>
+    </div>
+  </div>
+
+<script>
+  var appUrl = new URL('./', location.href).href;
+  document.getElementById('url').textContent = appUrl;
+  document.getElementById('copy').onclick = function () {
+    var btn = this;
+    navigator.clipboard.writeText(appUrl).then(function () { btn.textContent = '복사됨!'; setTimeout(function () { btn.textContent = '복사'; }, 2000); });
+  };
+  document.querySelectorAll('.os-tab').forEach(function (tab) {
+    tab.onclick = function () {
+      document.querySelectorAll('.os-tab').forEach(function (t) { t.classList.remove('active'); });
+      document.querySelectorAll('.step-list').forEach(function (l) { l.classList.remove('active'); });
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.os).classList.add('active');
+    };
+  });
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent)) document.querySelector('[data-os="ios"]').click();
+</script>
+</body>
+</html>
