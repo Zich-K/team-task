@@ -185,7 +185,10 @@ export function Briefing({ monday, search, onEdit }: PageProps) {
                         <div className="small muted">{r.t.mainTitle}</div>
                       </div>
                     </div>
-                    <button className={`brief-tag ${r.block}`} onClick={e => openMemo(r.t, e)}>{r.dayLabel}{r.memo ? ' ✎' : ''}</button>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                      <button className={`brief-tag ${r.block}`} onClick={e => openMemo(r.t, e)}>{r.dayLabel}{r.memo ? ' ✎' : ''}</button>
+                      <StatusPicker t={r.t} />
+                    </div>
                   </div>
                 ))}
               </Fragment>

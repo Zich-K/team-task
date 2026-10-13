@@ -86,52 +86,34 @@ function Shell({ me }: { me: Profile }) {
   const [monday, setMonday] = useState(() => getMonday(new Date()));
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState<TaskDraft | null>(null);
-  const [navOpen, setNavOpen] = useState(false);
+  const [userMenu, setUserMenu] = useState(false);
 
-  useEffect(() => { history.replaceState(null, '', '#' + page); }, [page]);
+  useEffect(() => { history.replaceState(null, '', '#' + page); window.scrollTo(0, 0); }, [page]);
+  // 선택된 탭이 화면 밖이면 보이도록 (휴대폰에서 탭 줄을 옆으로 밀어 쓸 때)
+  useEffect(() => { document.querySelector('.tabs .tab.active')?.scrollIntoView({ block: 'nearest', inline: 'center' }); }, [page]);
   const current = PAGES.find(p => p.id === page)!;
   const thisMonday = getMonday(new Date());
   const isThisWeek = monday.getTime() === thisMonday.getTime();
   const open = views.filter(t => t.status !== '완료');
+  const label = (p: typeof PAGES[number]) => (p.id === 'eval' && !isLead ? '내 평가' : p.id === 'mykpi' && isLead ? 'KPI 작성·승인' : p.label);
+  const showSearch = !['eval', 'admin', 'report', 'mykpi'].includes(page);
 
   const props: PageProps = {
     monday, search,
     onEdit: (t: TaskView) => setDraft({ task: t }),
     onAdd: d => setDraft({ assigneeId: d?.assigneeId }),
+    go: (id: string) => setPage(id as PageId),
   };
 
-  let lastGroup = '';
   return (
-    <div className="shell">
-      {navOpen && <div className="scrim" onClick={() => setNavOpen(false)} />}
-      <aside className={`sidebar${navOpen ? ' open' : ''}`}>
-        <div className="brand">
-          <div className="brand-mark">{Icon.dash}</div>
-          <div><div className="brand-name">팀 업무 관리</div><div className="brand-sub">진행 중 {open.length}건{IS_DEMO ? ' · 예시 데이터' : ''}</div></div>
-        </div>
-        {PAGES.map(p => {
-          const head = p.group !== lastGroup ? <div className="nav-label">{p.group}</div> : null;
-          lastGroup = p.group;
-          return (
-            <div key={p.id}>
-              {head}
-              <button className={`nav-item${p.id === page ? ' active' : ''}`} onClick={() => { setPage(p.id); setNavOpen(false); }}>
-                {p.icon}{p.id === 'eval' && !isLead ? '내 평가' : p.id === 'mykpi' && isLead ? 'KPI 작성·승인' : p.label}
-                {p.id === 'mykpi' && isLead && pendingKpi > 0 && <span className="nav-badge">{pendingKpi}</span>}
-              </button>
-            </div>
-          );
-        })}
-        <div className="sidebar-foot">
-          <Avatar name={me.name} color={me.color} size={26} />
-          <div className="grow"><b>{me.name}</b><div className="small muted">{me.role === 'lead' ? '팀장' : '팀원'}</div></div>
-          {!IS_DEMO && <button className="btn btn-sm btn-ghost" onClick={() => supabase.auth.signOut()}>로그아웃</button>}
-        </div>
-      </aside>
-      <div className="main">
-        <header className="topbar">
-          <button className="icon-btn mobile-only" onClick={() => setNavOpen(true)} aria-label="메뉴">{Icon.menu}</button>
-          <div className="page-title">{current.id === 'eval' && !isLead ? '내 평가' : current.id === 'mykpi' && isLead ? 'KPI 작성·승인' : current.label}</div>
+    <div className="app">
+      <header className="header">
+        <div className="header-top">
+          <div className="brand">
+            <div className="brand-mark">{Icon.dash}</div>
+            <div className="hide-sm"><div className="brand-name">팀 업무 관리</div>
+              <div className="brand-sub">진행 중 {open.length}건{IS_DEMO ? ' · 예시 데이터' : ''}</div></div>
+          </div>
           {current.week && (
             <div className="week-nav">
               <button onClick={() => setMonday(addDays(monday, -7))} aria-label="이전 주">{Icon.left}</button>
@@ -140,14 +122,34 @@ function Shell({ me }: { me: Profile }) {
               {!isThisWeek && <button className="today" onClick={() => setMonday(thisMonday)}>이번 주</button>}
             </div>
           )}
-          {!['eval', 'admin', 'report', 'mykpi'].includes(page) && (
-            <div className="search">{Icon.search}<input className="input" placeholder="업무·담당자·KPI 검색" value={search} onChange={e => setSearch(e.target.value)} /></div>
-          )}
+          <span className="spacer" />
+          {showSearch && <div className="search">{Icon.search}<input className="input" placeholder="업무·담당자·KPI 검색" value={search} onChange={e => setSearch(e.target.value)} /></div>}
           <button className="btn btn-primary" onClick={() => setDraft({})}>{Icon.plus}<span className="hide-sm">업무 추가</span></button>
-        </header>
-        <main className="content"><current.C {...props} /></main>
-      </div>
+          <div className="user">
+            <button className="user-btn" onClick={() => setUserMenu(!userMenu)} aria-label="내 정보"><Avatar name={me.name} color={me.color} size={30} /></button>
+            {userMenu && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 150 }} onClick={() => setUserMenu(false)} />
+                <div className="menu user-menu">
+                  <div style={{ padding: '6px 8px' }}><b>{me.name}</b><div className="small muted">{me.role === 'lead' ? '팀장' : '팀원'}{me.email ? ` · ${me.email}` : ''}</div></div>
+                  {!IS_DEMO && <button onClick={() => supabase.auth.signOut()}>로그아웃</button>}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        <nav className="tabs" aria-label="메뉴">
+          {PAGES.map(p => (
+            <button key={p.id} className={`tab${p.id === page ? ' active' : ''}${p.id === 'admin' ? ' tab-end' : ''}`} onClick={() => setPage(p.id)}>
+              {label(p)}
+              {p.id === 'mykpi' && isLead && pendingKpi > 0 && <span className="nav-badge">{pendingKpi}</span>}
+            </button>
+          ))}
+        </nav>
+      </header>
+      <main className="content"><current.C {...props} /></main>
       {draft && <TaskModal draft={draft} onClose={() => setDraft(null)} />}
     </div>
   );
 }
+

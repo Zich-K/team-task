@@ -11,6 +11,8 @@ export interface PageProps {
   search: string;
   onEdit: (t: TaskView) => void;
   onAdd: (defaults?: { assigneeId?: string }) => void;
+  /** 다른 화면(탭)으로 이동 */
+  go: (page: string) => void;
 }
 
 /** 검색어: 메인·서브 업무명, 비고, 담당자, KPI 에서 찾는다 (띄어쓰기 무시) */
@@ -27,7 +29,76 @@ export function useSearch(tasks: TaskView[], search: string) {
 type Focus = 'open' | 'all' | 'doing' | 'late' | 'long' | 'done';
 const FOCUS_LABEL: Record<Focus, string> = { open: '진행·예정 업무', all: '전체 업무', doing: '진행 중', late: '마감 지남', long: '3주 이상 진행', done: '완료된 업무' };
 
-export function Dashboard({ search, onEdit }: PageProps) {
+/** 대시보드 KPI 현황: 올해 KPI 별 연결 업무·완료, 이번 분기 진행, 사람별 연계율. KPI 를 누르면 아래 목록이 그 KPI 업무로 걸러진다 */
+function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (id: string) => void; go: (p: string) => void }) {
+  const { views, data, approvedKpis, isLead, me } = useApp();
+  const now = new Date();
+  const year = now.getFullYear();
+  const q = Math.floor(now.getMonth() / 3);
+  const qStart = new Date(year, q * 3, 1), qEnd = new Date(year, q * 3 + 3, 0, 23, 59, 59);
+  const inYear = (t: TaskView) => !!t.end_date && t.end_date.startsWith(String(year));
+  const inQ = (t: TaskView) => { const d = parseDate(t.end_date); return !!d && d >= qStart && d <= qEnd; };
+  const kpis = approvedKpis.filter(k => k.year === year);
+  const qTasks = views.filter(inQ);
+  const owners = (id: string) => data.kpiOwners.filter(o => o.kpi_id === id).map(o => data.profiles.find(p => p.id === o.profile_id)).filter(Boolean);
+  const pending = data.kpis.filter(k => k.status === 'submitted').length;
+  const suggest = views.filter(t => !t.kpi_id && data.groups.find(g => g.id === t.group_id)?.kpi_id && (isLead || t.assignee_id === me?.id)).length;
+  const cats = [...new Set(kpis.map(k => k.category))];
+
+  return (
+    <div className="card" style={{ marginBottom: 20 }}>
+      <div className="card-head" style={{ flexWrap: 'wrap' }}>
+        <span className="card-title">KPI 현황</span><span className="card-sub">{year}년 · 이번 분기 {q + 1}분기</span>
+        <span className="spacer" />
+        {isLead && pending > 0 && <button className="chip chip-warn" onClick={() => go('mykpi')}>승인 대기 {pending}</button>}
+        {suggest > 0 && <button className="chip" onClick={() => go('admin')}>KPI 연결 제안 {suggest}건 →</button>}
+      </div>
+      <div className="kpi-ov">
+        <div className="kpi-ov-people">
+          <div className="small muted" style={{ marginBottom: 8 }}>이번 분기 KPI 연계율</div>
+          {data.profiles.map(p => {
+            const mine = qTasks.filter(t => t.assignee_id === p.id);
+            const linked = mine.filter(t => t.kpi_id).length;
+            const pct = mine.length ? Math.round(linked / mine.length * 100) : 0;
+            return (
+              <div key={p.id} className="hbar-row">
+                <span className="who"><Avatar name={p.name} color={p.color} size={18} />{p.name}</span>
+                <span className="hbar"><i style={{ width: `${pct}%`, background: '#6a4fc4' }} /></span>
+                <span className="small muted">{pct}%</span>
+              </div>
+            );
+          })}
+          <div className="small muted">이번 분기 마감 업무 중 KPI 에 연결된 비율</div>
+        </div>
+        <div className="kpi-ov-list">
+          {cats.map(c => (
+            <div key={c}>
+              <div className="kpi-ov-cat">{c}</div>
+              {kpis.filter(k => k.category === c).map(k => {
+                const ys = views.filter(t => t.kpi_id === k.id && inYear(t));
+                const done = ys.filter(t => t.status === '완료').length;
+                const qn = qTasks.filter(t => t.kpi_id === k.id).length;
+                return (
+                  <button key={k.id} className={`kpi-ov-row${selected === k.id ? ' on' : ''}`}
+                    onClick={() => { onSelect(k.id); setTimeout(() => document.getElementById('task-list')?.scrollIntoView({ behavior: 'smooth' }), 50); }}>
+                    <span className="badge badge-kpi">{k.id}</span>
+                    <span className="kpi-ov-title">{k.title}</span>
+                    <span className="kpi-ov-owners">{owners(k.id).map(p => <Avatar key={p!.id} name={p!.name} color={p!.color} size={18} />)}</span>
+                    <span className="kpi-ov-bar"><span className="bar"><i style={{ width: `${ys.length ? Math.round(done / ys.length * 100) : 0}%`, background: 'var(--info)' }} /></span><span className="small muted">{done}/{ys.length}</span></span>
+                    <span className={`kpi-ov-q${qn ? '' : ' zero'}`}>{qn ? `이번 분기 ${qn}건` : '이번 분기 없음'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+          {!kpis.length && <div className="empty">올해 승인된 KPI 가 없습니다</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Dashboard({ search, onEdit, go }: PageProps) {
   const { views, data, approvedKpis } = useApp();
   const [focus, setFocus] = useState<Focus>('open');
   const [member, setMember] = useState('');
@@ -130,7 +201,9 @@ export function Dashboard({ search, onEdit }: PageProps) {
         </div>
       </div>
 
-      <div className="section-head">
+      <KpiOverview selected={kpi} onSelect={id => { setKpi(kpi === id ? '' : id); if (focus === 'open') setFocus('all'); }} go={go} />
+
+      <div className="section-head" id="task-list">
         <span className="section-title">{FOCUS_LABEL[focus]}</span>
         <span className="badge badge-soft">{filtered.length}건</span>
         {member && <button className="chip" onClick={() => setMember('')}>{data.profiles.find(p => p.id === member)?.name} ×</button>}
