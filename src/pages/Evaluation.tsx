@@ -171,8 +171,7 @@ function LeadEvaluation({ onEdit }: PageProps) {
                 );
               })}
               <div className="field" style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-                <label>종합 등급</label>
-                <div className="grade-pick" style={{ marginBottom: 8 }}>{GRADES.map(x => <button key={x} className={overall.grade === x ? 'on' : ''} onClick={() => setOverall(o => ({ ...o, grade: o.grade === x ? null : x }))}>{x}</button>)}</div>
+                <label>종합 의견</label>
                 <textarea className="textarea" value={overall.comment} onChange={e => setOverall(o => ({ ...o, comment: e.target.value }))} placeholder="종합 의견" />
               </div>
               <div className="row" style={{ justifyContent: 'flex-end' }}>
