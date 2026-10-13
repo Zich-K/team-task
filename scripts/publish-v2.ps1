@@ -1,4 +1,4 @@
-# 병행 운영용 게시: 새 사이트를 main 브랜치의 v2/ 폴더에 올린다.
+﻿# 병행 운영용 게시: 새 사이트를 main 브랜치의 v2/ 폴더에 올린다.
 # 기존 사이트(main 루트의 index.html)는 건드리지 않는다.
 # 사용: powershell -File scripts/publish-v2.ps1
 $ErrorActionPreference = 'Stop'
