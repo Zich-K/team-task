@@ -24,11 +24,15 @@ export function MyKpi(_: PageProps) {
 
   const ownerOf = new Set(data.kpiOwners.filter(o => o.profile_id === who).map(o => o.kpi_id));
   const yearKpis = data.kpis.filter(k => k.year === year);
-  const teamKpis = yearKpis.filter(k => k.status === 'approved' && ownerOf.has(k.id) && k.created_by !== who);
+  // 팀장이 본인 화면을 볼 때는 팀 KPI 전체(K1~)를, 그 외에는 그 사람에게 배정된 팀 KPI 를 보여준다
+  const teamAll = isLead && self;
+  const teamKpis = yearKpis.filter(k => k.status === 'approved' && !k.created_by && (teamAll || ownerOf.has(k.id)))
+    .sort((a, b) => a.sort_order - b.sort_order);
   const ownKpis = yearKpis.filter(k => k.created_by === who);
   const pending = data.kpis.filter(k => k.status === 'submitted');
   const weightSum = ownKpis.filter(k => k.status !== 'rejected').reduce((s, k) => s + (k.weight || 0), 0);
-  const linkedCount = (id: string) => views.filter(t => t.kpi_id === id && t.assignee_id === who && t.end_date?.startsWith(String(year))).length;
+  const linkedCount = (id: string) => views.filter(t => t.kpi_id === id && (teamAll || t.assignee_id === who) && t.end_date?.startsWith(String(year))).length;
+  const ownerNames = (id: string) => data.kpiOwners.filter(o => o.kpi_id === id).map(o => data.profiles.find(p => p.id === o.profile_id)?.name).filter(Boolean).join(', ');
 
   const kpiCard = (k: Kpi, editable: boolean) => (
     <div key={k.id} className="kpi-card">
@@ -40,13 +44,14 @@ export function MyKpi(_: PageProps) {
             <span className="small muted">{k.category} · {k.period}{k.weight != null ? ` · 비중 ${k.weight}%` : ''}</span>
           </div>
           <div className="ttl">{k.title}</div>
+          {teamAll && !k.created_by && <div className="small muted" style={{ marginTop: 2 }}>담당: {ownerNames(k.id) || '-'}</div>}
           {(k.measure || k.target) && <div className="small" style={{ marginTop: 4, color: 'var(--text-2)' }}>
             {k.measure && <>측정: {k.measure}</>}{k.measure && k.target && ' · '}{k.target && <>목표: {k.target}</>}</div>}
           {k.status === 'rejected' && k.lead_comment && <div className="callout warn small" style={{ marginTop: 8 }}>팀장 의견: {k.lead_comment}</div>}
           {k.status === 'approved' && k.lead_comment && <div className="small muted" style={{ marginTop: 6 }}>팀장 의견: {k.lead_comment}</div>}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div className="small muted">올해 연결 업무 {linkedCount(k.id)}건</div>
+          <div className="small muted">올해 연결 업무 {linkedCount(k.id)}건{teamAll && !k.created_by ? ' (팀 전체)' : ''}</div>
           {editable && k.status !== 'approved' && (
             <div className="row" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
               <button className="btn btn-sm" onClick={() => setEdit({ ...k })}>수정</button>
@@ -91,7 +96,8 @@ export function MyKpi(_: PageProps) {
           </div>
         </div>
         <div className="card">
-          <div className="card-head"><span className="card-title">배정된 팀 KPI</span><span className="card-sub">팀장이 정한 공통·담당 KPI</span></div>
+          <div className="card-head"><span className="card-title">{teamAll ? `팀 KPI 전체 (${teamKpis.length})` : '배정된 팀 KPI'}</span>
+            <span className="card-sub">{teamAll ? '팀원 전체 기준 · 담당자 표시' : '팀장이 정한 공통·담당 KPI'}</span></div>
           <div className="card-pad">
             {teamKpis.map(k => kpiCard(k, false))}
             {!teamKpis.length && <div className="empty">배정된 팀 KPI 가 없습니다</div>}

@@ -55,7 +55,8 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
 
   // 담당자의 KPI 를 위로
   const myKpis = new Set(data.kpiOwners.filter(o => o.profile_id === assignee).map(o => o.kpi_id));
-  const kpiOptions = [...approvedKpis].sort((a, b) => Number(myKpis.has(b.id)) - Number(myKpis.has(a.id)) || a.sort_order - b.sort_order);
+  // 번호 순서(K1, K2 …) 그대로 두고, 담당자 KPI 는 ★ 로만 표시
+  const kpiOptions = [...approvedKpis].sort((a, b) => a.sort_order - b.sort_order);
 
   async function save() {
     if (!mainTitle.trim()) { setErr('메인 업무명을 입력해주세요'); return; }
