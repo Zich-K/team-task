@@ -1,7 +1,11 @@
 import { supabase } from './supabase';
 import type {
   AppData, Task, TaskGroup, Kpi, ReportSettings, Profile, Evaluation, EvaluationItem, EvalPeriod, KpiOwner, KpiReview,
+  Meeting, MeetingItem,
 } from './types';
+
+const MEETING_FIELDS = ['title', 'series', 'meeting_at', 'attendee_ids', 'external_attendees', 'group_id', 'agenda', 'decisions', 'notes'] as const;
+const pickMeeting = (m: Partial<Meeting>) => Object.fromEntries(MEETING_FIELDS.filter(f => f in m).map(f => [f, (m as any)[f]]));
 
 const KPI_FIELDS = ['year', 'category', 'title', 'owner_text', 'period', 'note', 'sort_order', 'active', 'status', 'measure', 'target', 'weight'] as const;
 const pickKpi = (k: Partial<Kpi>) => Object.fromEntries(KPI_FIELDS.filter(f => f in k).map(f => [f, (k as any)[f]]));
@@ -27,6 +31,11 @@ export interface Backend {
   /** 팀장: 승인/반려 */
   decideKpi(id: string, status: 'approved' | 'rejected', comment: string): Promise<void>;
   saveReview(r: KpiReview): Promise<void>;
+  /** 회의록 저장 (id 없으면 새로). 저장된 id 를 돌려준다 */
+  upsertMeeting(m: Partial<Meeting> & { title: string }): Promise<string>;
+  /** 회의록의 할 일 목록을 통째로 바꾼다 (빠진 항목은 지움, 연결된 업무는 그대로 남음) */
+  replaceMeetingItems(meetingId: string, items: MeetingItem[]): Promise<void>;
+  deleteMeeting(id: string): Promise<void>;
   saveProfile(p: Pick<Profile, 'id'> & Partial<Profile>): Promise<void>;
   addProfile(p: Pick<Profile, 'name' | 'email' | 'role' | 'color'>): Promise<void>;
   /** 팀장: 로그인 초기화 (비밀번호 분실 시). 기록은 유지 */
@@ -60,7 +69,7 @@ const pickTask = (t: TaskInput) => Object.fromEntries(TASK_FIELDS.filter(k => k 
 
 export const supabaseBackend: Backend = {
   async loadAll() {
-    const [profiles, groups, kpis, kpiOwners, tasks, events, holidays, settings, reviews] = await Promise.all([
+    const [profiles, groups, kpis, kpiOwners, tasks, events, holidays, settings, reviews, meetings, meetingItems] = await Promise.all([
       all<Profile>('profiles', q => q.order('sort_order')),
       all<TaskGroup>('task_groups', q => q.is('merged_into', null)),
       all<Kpi>('kpis', q => q.order('sort_order')),
@@ -70,10 +79,12 @@ export const supabaseBackend: Backend = {
       all<{ day: string }>('holidays'),
       all<{ key: string; value: any }>('app_settings', q => q.eq('key', 'report_settings')),
       all<KpiReview>('kpi_reviews'),
+      all<Meeting>('meetings', q => q.is('deleted_at', null).order('meeting_at', { ascending: false })),
+      all<MeetingItem>('meeting_items', q => q.order('sort_order')),
     ]);
     const rs = settings[0]?.value || {};
     return {
-      profiles, groups, kpis, kpiOwners, tasks, events, reviews,
+      profiles, groups, kpis, kpiOwners, tasks, events, reviews, meetings, meetingItems,
       holidays: holidays.map(h => h.day),
       reportSettings: { last: rs.last || {}, this: rs.this || {} },
     };
@@ -132,6 +143,31 @@ export const supabaseBackend: Backend = {
   },
   async decideKpi(id, status, comment) {
     must(await supabase.from('kpis').update({ status, lead_comment: comment }).eq('id', id));
+  },
+  async upsertMeeting(m) {
+    const row = pickMeeting(m);
+    if (m.id) {
+      must(await supabase.from('meetings').update(row).eq('id', m.id));
+      return m.id;
+    }
+    const created = must(await supabase.from('meetings').insert(row).select('id').single()) as { id: string };
+    return created.id;
+  },
+  async replaceMeetingItems(meetingId, items) {
+    const { data: existing } = await supabase.from('meeting_items').select('id').eq('meeting_id', meetingId);
+    const keep = new Set(items.filter(i => i.id).map(i => i.id));
+    const gone = (existing || []).map(r => r.id as string).filter(id => !keep.has(id));
+    if (gone.length) must(await supabase.from('meeting_items').delete().in('id', gone));
+    const rows = items.map((i, n) => ({
+      id: i.id, meeting_id: meetingId, content: i.content, assignee_id: i.assignee_id,
+      due_date: i.due_date, task_id: i.task_id, sort_order: n,
+    }));
+    const olds = rows.filter(r => r.id), news = rows.filter(r => !r.id).map(({ id: _id, ...r }) => r);
+    if (olds.length) must(await supabase.from('meeting_items').upsert(olds));
+    if (news.length) must(await supabase.from('meeting_items').insert(news));
+  },
+  async deleteMeeting(id) {
+    must(await supabase.from('meetings').update({ deleted_at: new Date().toISOString() }).eq('id', id));
   },
   async saveReview(r) {
     const { id: _id, updated_at: _u, ...row } = r;

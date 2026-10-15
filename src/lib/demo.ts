@@ -1,6 +1,6 @@
 // 가상 데이터 (?demo). 실제 팀원·업무와 무관한 예시. 저장은 브라우저 메모리에서만.
 import type { Backend, TaskInput } from './backend';
-import type { AppData, Task, TaskGroup, Kpi, Profile, Evaluation, EvaluationItem } from './types';
+import type { AppData, Task, TaskGroup, Kpi, Profile, Evaluation, EvaluationItem, Meeting, MeetingItem } from './types';
 import { addDays, getMonday, normTitle, toISODate } from './logic';
 
 let seq = 1;
@@ -109,12 +109,35 @@ function makeData(): AppData & { evaluations: Evaluation[]; items: EvaluationIte
     if (ks.size === 1) g.kpi_id = [...ks][0];
   });
 
+  // 회의록 예시: 지난주 주간 팀 회의 (할 일 3건은 업무로 등록된 상태)
+  const prevMon = addDays(mon, -7);
+  const meetGroup = live.find(g => g.title === 'KPI 운영')!;
+  const meetTasks: [string, string, number, Task['status']][] = [
+    ['4분기 KPI 중간 점검표 작성', 'p2', 2, '완료'], ['거래처 대시보드 최종 검수', 'p3', 3, '진행 중'], ['분기 포상 후보 정리', 'p1', -1, '예정'],
+  ];
+  const m1: Meeting = {
+    id: 'm1', title: '주간 팀 회의', series: '주간 팀 회의', meeting_at: new Date(prevMon.getTime() + 10 * 3600e3).toISOString(),
+    attendee_ids: ['p1', 'p2', 'p3'], external_attendees: '', group_id: meetGroup.id,
+    agenda: '1. 지난주 업무 공유\n2. 4분기 KPI 점검 일정', decisions: '4분기 KPI 중간 점검은 이번 달 안에 마무리\n대시보드 오픈은 다음 주 금요일',
+    notes: '', created_by: 'p1', updated_at: prevMon.toISOString(), deleted_at: null,
+  };
+  const meetingItems: MeetingItem[] = meetTasks.map(([content, who, dueDays, status], i) => {
+    const t: Task = {
+      id: uid(), legacy_id: null, group_id: meetGroup.id, sub_title: content, title: content, assignee_id: who, status,
+      start_date: toISODate(prevMon), end_date: toISODate(addDays(mon, dueDays)), note: '', block_note: '', priority: 2,
+      kpi_id: meetGroup.kpi_id, completed_at: null, created_at: prevMon.toISOString(), updated_at: prevMon.toISOString(), deleted_at: null,
+    };
+    tasks.push(t);
+    return { id: `mi${i}`, meeting_id: 'm1', content, assignee_id: who, due_date: t.end_date, task_id: t.id, sort_order: i };
+  });
+
   return {
     profiles, groups: live, kpis, kpiOwners, tasks, events: [],
     holidays: ['2026-10-03', '2026-10-09', '2026-12-25'],
     reportSettings: { last: {}, this: {} },
     reviews: [{ kpi_id: 'K5', profile_id: 'p2', year: 2026, period: 'Q3', self_grade: '우수',
       achievement: 'C부문 월별 트렌드 분석 자료를 매달 제때 공유했고, 9월에는 재고 회전 분석을 추가로 진행함.' }],
+    meetings: [m1], meetingItems,
     evaluations: [], items: [],
   };
 }
@@ -188,6 +211,20 @@ export const demoBackend: Backend = {
     db.kpiOwners.push({ kpi_id: id, profile_id: meId });
   },
   async decideKpi(id, status, comment) { Object.assign(db.kpis.find(x => x.id === id)!, { status, lead_comment: comment }); },
+  async upsertMeeting(m) {
+    if (m.id) { Object.assign(db.meetings.find(x => x.id === m.id)!, m, { updated_at: now() }); return m.id; }
+    const id = uid();
+    db.meetings.unshift({
+      id, series: null, meeting_at: now(), attendee_ids: [], external_attendees: '', group_id: null, agenda: '', decisions: '',
+      notes: '', created_by: DEMO_PROFILE_ID, updated_at: now(), deleted_at: null, ...m,
+    });
+    return id;
+  },
+  async replaceMeetingItems(meetingId, items) {
+    db.meetingItems = db.meetingItems.filter(i => i.meeting_id !== meetingId)
+      .concat(items.map((i, n) => ({ ...i, id: i.id || uid(), meeting_id: meetingId, sort_order: n })));
+  },
+  async deleteMeeting(id) { db.meetings.find(x => x.id === id)!.deleted_at = now(); db.meetings = db.meetings.filter(x => !x.deleted_at); },
   async saveReview(r) {
     db.reviews = db.reviews.filter(x => !(x.kpi_id === r.kpi_id && x.profile_id === r.profile_id && x.year === r.year && x.period === r.period));
     db.reviews.push({ ...r, updated_at: now() });

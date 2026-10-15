@@ -118,6 +118,33 @@ export interface EvaluationItem {
   comment: string;
 }
 
+export interface Meeting {
+  id: string;
+  title: string;
+  /** 정기 회의 이름. 같은 이름끼리 지난 회차 할 일을 이어서 본다 */
+  series: string | null;
+  meeting_at: string;
+  attendee_ids: string[];
+  external_attendees: string;
+  group_id: string | null;
+  agenda: string;
+  decisions: string;
+  notes: string;
+  created_by: string | null;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface MeetingItem {
+  id?: string;
+  meeting_id?: string;
+  content: string;
+  assignee_id: string | null;
+  due_date: string | null;
+  task_id: string | null;
+  sort_order: number;
+}
+
 /** 화면에서 쓰는 업무: 묶음 이름·담당자 이름을 붙인 형태 */
 export interface TaskView extends Task {
   mainTitle: string;
@@ -134,4 +161,6 @@ export interface AppData {
   holidays: string[];
   reportSettings: ReportSettings;
   reviews: KpiReview[];
+  meetings: Meeting[];
+  meetingItems: MeetingItem[];
 }

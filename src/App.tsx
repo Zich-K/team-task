@@ -14,15 +14,17 @@ import { Perf } from './pages/Perf';
 import { Report } from './pages/Report';
 import { Evaluation } from './pages/Evaluation';
 import { MyKpi } from './pages/MyKpi';
+import { Meetings } from './pages/Meetings';
 import { Admin } from './pages/Admin';
 import { Login } from './pages/Login';
 
-type PageId = 'dashboard' | 'members' | 'team' | 'briefing' | 'perf' | 'report' | 'mykpi' | 'eval' | 'admin';
+type PageId = 'dashboard' | 'members' | 'team' | 'briefing' | 'meetings' | 'perf' | 'report' | 'mykpi' | 'eval' | 'admin';
 const PAGES: { id: PageId; label: string; icon: ReactNode; week?: boolean; lead?: boolean; group: string; C: (p: PageProps) => ReactNode }[] = [
   { id: 'dashboard', label: '대시보드', icon: Icon.dash, group: '업무', C: Dashboard },
   { id: 'members', label: '팀원별 업무', icon: Icon.user, group: '업무', C: Members },
   { id: 'team', label: '팀 합본', icon: Icon.team, week: true, group: '업무', C: Team },
   { id: 'briefing', label: '위클리 브리핑', icon: Icon.brief, week: true, group: '업무', C: Briefing },
+  { id: 'meetings', label: '회의록', icon: Icon.report, group: '업무', C: Meetings },
   { id: 'report', label: '주간 리포트', icon: Icon.report, week: true, group: '보고', C: Report },
   { id: 'perf', label: '성과 리포트', icon: Icon.chart, group: '보고', C: Perf },
   { id: 'mykpi', label: '내 KPI', icon: Icon.target, group: '평가', C: MyKpi },
