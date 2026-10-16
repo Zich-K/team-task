@@ -121,6 +121,9 @@ function Shell({ me }: { me: Profile }) {
           <a className="ext-link" href="https://mega-deal-desk.mega-deal-desk.workers.dev/dashboard" target="_blank" rel="noopener noreferrer" title="Mega Deal Desk (새 창)">
             <span className="hide-sm">Mega Deal Desk</span><span className="mobile-only-inline">MDD</span> ↗
           </a>
+          <a className="ext-link" href="https://dwcts-inventory-risk.netlify.app/" target="_blank" rel="noopener noreferrer" title="재고리스크 위원회 (새 창)">
+            <span className="hide-sm">재고리스크 위원회</span><span className="mobile-only-inline">재고리스크</span> ↗
+          </a>
           {current.week && (
             <div className="week-nav">
               <button onClick={() => setMonday(addDays(monday, -7))} aria-label="이전 주">{Icon.left}</button>
