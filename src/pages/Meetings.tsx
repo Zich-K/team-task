@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../lib/store';
 import type { Meeting, MeetingItem, TaskView } from '../lib/types';
 import { fmtYM, normTitle, parseDate } from '../lib/logic';
@@ -96,6 +96,7 @@ function MeetingRow({ m, onClick }: { m: Meeting; onClick: () => void }) {
       <div className="mt-main">
         <div className="row" style={{ gap: 6 }}>
           <b>{m.title}</b>{m.series && <span className="badge badge-soft">정기</span>}
+          {m.status === 'draft' && <span className="badge badge-보류">작성 중</span>}
         </div>
         <div className="small muted">{fmtAt(m.meeting_at)} · 참석 {m.attendee_ids.length + (m.external_attendees.trim() ? lines(m.external_attendees.replace(/,/g, '\n')).length : 0)}명</div>
         {first && <div className="small mt-dec">결정: {first}{lines(m.decisions).length > 1 ? ` 외 ${lines(m.decisions).length - 1}건` : ''}</div>}
@@ -116,7 +117,7 @@ function PrevItems({ m }: { m: Partial<Meeting> }) {
   const status = useItemStatus();
   if (!m.series) return null;
   const at = m.meeting_at ? new Date(m.meeting_at).getTime() : Date.now();
-  const prev = data.meetings.filter(x => x.series === m.series && x.id !== m.id && new Date(x.meeting_at).getTime() < at)
+  const prev = data.meetings.filter(x => x.series === m.series && x.id !== m.id && x.status !== 'draft' && new Date(x.meeting_at).getTime() < at)
     .sort((a, b) => b.meeting_at.localeCompare(a.meeting_at))[0];
   if (!prev) return null;
   const items = data.meetingItems.filter(i => i.meeting_id === prev.id).map(i => ({ i, ...status(i) }));
@@ -150,10 +151,11 @@ function MeetingView({ m, onBack, onEditMeeting, onNext, onEditTask }: {
       <div className="mt-doc-head">
         <button className="btn btn-sm btn-ghost" onClick={onBack}>← 목록</button>
         <span className="spacer" />
-        {m.series && <button className="btn btn-sm" onClick={onNext}>다음 회차 만들기</button>}
-        <button className="btn btn-sm btn-primary" onClick={onEditMeeting}>수정</button>
+        {m.series && m.status !== 'draft' && <button className="btn btn-sm" onClick={onNext}>다음 회차 만들기</button>}
+        <button className="btn btn-sm btn-primary" onClick={onEditMeeting}>{m.status === 'draft' ? '이어서 작성' : '수정'}</button>
       </div>
-      <h2 className="mt-title">{m.title}{m.series && <span className="badge badge-soft" style={{ marginLeft: 8, verticalAlign: 3 }}>정기</span>}</h2>
+      <h2 className="mt-title">{m.title}{m.series && <span className="badge badge-soft" style={{ marginLeft: 8, verticalAlign: 3 }}>정기</span>}
+        {m.status === 'draft' && <span className="badge badge-보류" style={{ marginLeft: 6, verticalAlign: 3 }}>작성 중 · 할 일 업무 미등록</span>}</h2>
       <div className="mt-meta">
         <span className="muted">일시</span><span>{fmtAt(m.meeting_at)}</span>
         <span className="muted">참석자</span><span>{[...m.attendee_ids.map(name).filter(Boolean), ...lines(m.external_attendees.replace(/,/g, '\n'))].join(', ') || '-'}</span>
@@ -189,7 +191,7 @@ function MeetingView({ m, onBack, onEditMeeting, onNext, onEditTask }: {
 function MeetingForm({ draft, initialItems, onClose, onEditTask }: {
   draft: Draft; initialItems: MeetingItem[]; onClose: (savedId?: string) => void; onEditTask: (t: TaskView) => void;
 }) {
-  const { data, people, me, saveMeeting } = useApp();
+  const { data, people, me, saveMeeting, deleteMeeting } = useApp();
   const status = useItemStatus();
   const [m, setM] = useState<Draft>(draft);
   const [items, setItems] = useState<MeetingItem[]>(initialItems.length ? initialItems : [blankItem(me?.id)]);
@@ -200,28 +202,101 @@ function MeetingForm({ draft, initialItems, onClose, onEditTask }: {
   const groupTitle = data.groups.find(g => g.id === m.group_id)?.title || '';
   const [groupText, setGroupText] = useState(groupTitle);
   const groupOptions = useMemo(() => [...data.groups].sort((a, b) => a.title.localeCompare(b.title)), [data.groups]);
+  const isFinal = m.status === 'final';
+  const groupIdOf = () => (groupText.trim() ? data.groups.find(x => normTitle(x.title) === normTitle(groupText))?.id ?? null : null);
+
+  // ── 자동 임시 저장 ──
+  // 1) 이 기기: 입력할 때마다 바로 보관 (창을 닫거나 새로고침해도 복구 가능)
+  // 2) 서버: 작성 중인 회의록(새 회의록·임시 저장본)은 입력이 멈추고 5초 뒤 임시 저장 (다른 기기에서도 이어 쓰기)
+  const localKey = (id?: string) => `mt-draft:${id || 'new'}`;
+  const snapshot = JSON.stringify({ m, items, groupText });
+  const [savedSnap, setSavedSnap] = useState(snapshot);
+  const [autoAt, setAutoAt] = useState<string | null>(null);
+  const [restore, setRestore] = useState<{ m: Draft; items: MeetingItem[]; groupText: string; at: string } | null>(() => {
+    try {
+      const raw = localStorage.getItem(localKey(draft.id));
+      if (!raw) return null;
+      const r = JSON.parse(raw);
+      return JSON.stringify({ m: r.m, items: r.items, groupText: r.groupText }) !== snapshot ? r : null;
+    } catch { return null; }
+  });
+  const dirty = snapshot !== savedSnap;
+
+  useEffect(() => {
+    if (!dirty || restore) return;
+    try { localStorage.setItem(localKey(m.id), JSON.stringify({ m, items, groupText, at: new Date().toISOString() })); } catch { /* 저장 공간 없음: 무시 */ }
+  }, [snapshot]);
+
+  useEffect(() => {
+    if (!dirty || isFinal || restore || !m.title.trim() || busy) return;
+    const timer = setTimeout(async () => {
+      try {
+        const id = await saveMeeting({ ...m, title: m.title.trim(), group_id: groupIdOf() }, items, { draft: true, quiet: true });
+        if (!m.id) { try { localStorage.removeItem(localKey()); } catch { /* */ } }
+        setM(x => ({ ...x, id, status: 'draft' }));
+        setSavedSnap(JSON.stringify({ m: { ...m, id, status: 'draft' }, items, groupText }));
+        try { localStorage.removeItem(localKey(id)); } catch { /* */ }
+        setAutoAt(new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }));
+      } catch { /* 다음 입력 때 다시 시도 */ }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [snapshot, restore, busy]);
+
+  const clearLocal = (id?: string) => { try { localStorage.removeItem(localKey(id)); localStorage.removeItem(localKey()); } catch { /* */ } };
 
   async function save() {
     if (!m.title.trim()) { setErr('회의 제목을 입력해주세요'); return; }
     const filled = items.filter(i => i.content.trim());
     if (!lines(m.decisions || '').length && !filled.length) { setErr('결정 사항이나 할 일 중 하나는 적어주세요'); return; }
-    const g = data.groups.find(x => normTitle(x.title) === normTitle(groupText));
     setBusy(true);
     try {
-      const id = await saveMeeting({ ...m, title: m.title.trim(), group_id: groupText.trim() ? g?.id ?? null : null }, filled);
+      const id = await saveMeeting({ ...m, title: m.title.trim(), group_id: groupIdOf() }, filled);
+      clearLocal(id);
       onClose(id);
     } catch { setBusy(false); }
   }
 
+  async function saveDraft() {
+    if (!m.title.trim()) { setErr('임시 저장하려면 회의 제목을 입력해주세요'); return; }
+    setBusy(true);
+    try {
+      const id = await saveMeeting({ ...m, title: m.title.trim(), group_id: groupIdOf() }, items, { draft: true });
+      clearLocal(id);
+      setM(x => ({ ...x, id, status: 'draft' }));
+      setSavedSnap(JSON.stringify({ m: { ...m, id, status: 'draft' }, items, groupText }));
+    } finally { setBusy(false); }
+  }
+
+  async function remove() {
+    if (!m.id) { clearLocal(); onClose(); return; }
+    if (!confirm(`「${m.title}」 회의록을 삭제할까요?${isFinal ? '\n이미 업무로 등록된 할 일은 지워지지 않고 남습니다.' : ''}`)) return;
+    await deleteMeeting(m.id);
+    clearLocal(m.id);
+    onClose();
+  }
+
   const unknownGroup = groupText.trim() && !data.groups.some(x => normTitle(x.title) === normTitle(groupText));
+  const saveState = busy ? '저장 중…' : dirty ? (isFinal ? '수정 중 · 이 기기에 보관됨' : '입력 중…') : autoAt ? `자동 임시 저장됨 ${autoAt}` : m.status === 'draft' ? '임시 저장본' : '';
 
   return (
     <div className="card mt-doc">
       <div className="mt-doc-head">
-        <b>{m.id ? '회의록 수정' : '새 회의록'}</b><span className="spacer" />
-        <button className="btn btn-sm" onClick={() => onClose(m.id)}>취소</button>
+        <b>{!m.id ? '새 회의록' : isFinal ? '회의록 수정' : '회의록 작성 중'}</b>
+        {saveState && <span className="small muted">{saveState}</span>}
+        <span className="spacer" />
+        <button className="btn btn-sm" onClick={() => onClose(m.id)}>닫기</button>
+        {!isFinal && <button className="btn btn-sm" onClick={saveDraft} disabled={busy}>임시 저장</button>}
         <button className="btn btn-sm btn-primary" onClick={save} disabled={busy}>{busy ? '저장 중…' : '저장'}</button>
       </div>
+      {restore && (
+        <div className="callout warn" style={{ marginBottom: 14 }}>
+          저장하지 않은 작성 내용이 있습니다 ({new Date(restore.at).toLocaleString('ko-KR')}).
+          <div className="row" style={{ marginTop: 8 }}>
+            <button className="btn btn-sm btn-primary" onClick={() => { setM(restore.m); setItems(restore.items); setGroupText(restore.groupText); setRestore(null); }}>불러오기</button>
+            <button className="btn btn-sm" onClick={() => { clearLocal(draft.id); setRestore(null); }}>버리기</button>
+          </div>
+        </div>
+      )}
 
       <div className="grid-2">
         <div className="field"><label>회의 제목</label>
@@ -291,10 +366,14 @@ function MeetingForm({ draft, initialItems, onClose, onEditTask }: {
         <textarea className="textarea" value={m.notes || ''} onChange={e => set({ notes: e.target.value })} style={{ minHeight: 90 }} />
       </section>
       {err && <div className="err" style={{ marginBottom: 8 }}>{err}</div>}
-      <div className="row" style={{ justifyContent: 'flex-end' }}>
-        <button className="btn" onClick={() => onClose(m.id)}>취소</button>
+      <div className="row">
+        <button className="btn btn-danger" onClick={remove}>{m.id ? '삭제' : '작성 취소'}</button>
+        <span className="spacer" />
+        <button className="btn" onClick={() => onClose(m.id)}>닫기</button>
+        {!isFinal && <button className="btn" onClick={saveDraft} disabled={busy}>임시 저장</button>}
         <button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? '저장 중…' : '저장'}</button>
       </div>
+      {!isFinal && <div className="small muted" style={{ marginTop: 8, textAlign: 'right' }}>입력하는 동안 자동으로 임시 저장됩니다. 할 일은 「저장」을 눌러야 업무로 등록됩니다.</div>}
     </div>
   );
 }

@@ -117,6 +117,10 @@ function Shell({ me }: { me: Profile }) {
             <div className="hide-sm"><div className="brand-name">팀 업무 관리</div>
               <div className="brand-sub">진행 중 {open.length}건{IS_DEMO ? ' · 예시 데이터' : ''}</div></div>
           </div>
+          {/* 함께 쓰는 다른 사내 사이트 */}
+          <a className="ext-link" href="https://mega-deal-desk.mega-deal-desk.workers.dev/dashboard" target="_blank" rel="noopener noreferrer" title="Mega Deal Desk (새 창)">
+            <span className="hide-sm">Mega Deal Desk</span><span className="mobile-only-inline">MDD</span> ↗
+          </a>
           {current.week && (
             <div className="week-nav">
               <button onClick={() => setMonday(addDays(monday, -7))} aria-label="이전 주">{Icon.left}</button>

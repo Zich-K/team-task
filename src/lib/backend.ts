@@ -4,7 +4,7 @@ import type {
   Meeting, MeetingItem,
 } from './types';
 
-const MEETING_FIELDS = ['title', 'series', 'meeting_at', 'attendee_ids', 'external_attendees', 'group_id', 'agenda', 'decisions', 'notes'] as const;
+const MEETING_FIELDS = ['title', 'series', 'meeting_at', 'attendee_ids', 'external_attendees', 'group_id', 'agenda', 'decisions', 'notes', 'status'] as const;
 const pickMeeting = (m: Partial<Meeting>) => Object.fromEntries(MEETING_FIELDS.filter(f => f in m).map(f => [f, (m as any)[f]]));
 
 const KPI_FIELDS = ['year', 'category', 'title', 'owner_text', 'period', 'note', 'sort_order', 'active', 'status', 'measure', 'target', 'weight'] as const;

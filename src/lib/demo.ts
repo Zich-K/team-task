@@ -119,7 +119,7 @@ function makeData(): AppData & { evaluations: Evaluation[]; items: EvaluationIte
     id: 'm1', title: '주간 팀 회의', series: '주간 팀 회의', meeting_at: new Date(prevMon.getTime() + 10 * 3600e3).toISOString(),
     attendee_ids: ['p1', 'p2', 'p3'], external_attendees: '', group_id: meetGroup.id,
     agenda: '1. 지난주 업무 공유\n2. 4분기 KPI 점검 일정', decisions: '4분기 KPI 중간 점검은 이번 달 안에 마무리\n대시보드 오픈은 다음 주 금요일',
-    notes: '', created_by: 'p1', updated_at: prevMon.toISOString(), deleted_at: null,
+    notes: '', status: 'final', created_by: 'p1', updated_at: prevMon.toISOString(), deleted_at: null,
   };
   const meetingItems: MeetingItem[] = meetTasks.map(([content, who, dueDays, status], i) => {
     const t: Task = {
@@ -216,7 +216,7 @@ export const demoBackend: Backend = {
     const id = uid();
     db.meetings.unshift({
       id, series: null, meeting_at: now(), attendee_ids: [], external_attendees: '', group_id: null, agenda: '', decisions: '',
-      notes: '', created_by: DEMO_PROFILE_ID, updated_at: now(), deleted_at: null, ...m,
+      notes: '', status: 'final', created_by: DEMO_PROFILE_ID, updated_at: now(), deleted_at: null, ...m,
     });
     return id;
   },

@@ -39,18 +39,27 @@ const STEPS: Record<Platform, { title: string; steps: string[] }> = {
 
 /** 화면 위쪽 「앱 설치」 버튼. 바로 설치할 수 있으면 설치 창을, 아니면 기기에 맞는 방법을 보여준다 */
 export function InstallButton() {
-  const { installed, install } = useInstall();
+  const { installed, canPrompt, install } = useInstall();
   const [help, setHelp] = useState(false);
   if (installed) return null;
   const p = platform();
   const guide = STEPS[p];
+  const installNow = async () => { setHelp(false); await install(); };
   return (
     <>
-      <button type="button" className="btn install-btn" onClick={async () => { if (!(await install())) setHelp(true); }} title="홈 화면·바탕화면에 아이콘 만들기">
+      <button type="button" className={`btn install-btn${canPrompt ? ' ready' : ''}`} onClick={async () => { if (!(await install())) setHelp(true); }} title="홈 화면·바탕화면에 아이콘 만들기">
         {Icon.download}<span>앱 설치</span>
       </button>
       {help && (
-        <Modal title="앱 아이콘 만들기" onClose={() => setHelp(false)} actions={<button type="button" className="btn btn-primary" onClick={() => setHelp(false)}>확인</button>}>
+        <Modal title="앱 아이콘 만들기" onClose={() => setHelp(false)}
+          actions={canPrompt
+            ? <><button type="button" className="btn" onClick={() => setHelp(false)}>닫기</button><button type="button" className="btn btn-primary" onClick={installNow}>지금 설치</button></>
+            : <button type="button" className="btn btn-primary" onClick={() => setHelp(false)}>확인</button>}>
+          {canPrompt
+            ? <div className="callout info" style={{ marginBottom: 14 }}>이제 바로 설치할 수 있습니다. 아래 「지금 설치」를 누르세요.</div>
+            : p !== 'ios' && <div className="callout" style={{ marginBottom: 14, fontSize: 12.5 }}>
+                브라우저가 아직 바로 설치를 허용하지 않았습니다. 이 창을 열어 둔 채 잠시(30초 정도) 기다리면 「지금 설치」 버튼이 나타날 수 있고, 아래 방법으로 직접 설치해도 됩니다.
+              </div>}
           <div className="small muted" style={{ marginBottom: 12 }}>{guide.title}</div>
           <ol className="install-steps">
             {guide.steps.map((s, i) => <li key={i}><span className="num">{i + 1}</span><span>{s}</span></li>)}

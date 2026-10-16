@@ -132,6 +132,8 @@ export interface Meeting {
   agenda: string;
   decisions: string;
   notes: string;
+  /** draft = 임시 저장(할 일을 아직 업무로 등록하지 않음), final = 저장 완료 */
+  status: 'draft' | 'final';
   created_by: string | null;
   updated_at: string;
   deleted_at: string | null;

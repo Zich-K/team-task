@@ -28,7 +28,7 @@ interface Ctx {
   saveReview: (r: KpiReview) => Promise<void>;
   setGroupKpi: (groupId: string, kpiId: string | null, fillEmpty: boolean) => Promise<void>;
   /** 회의록 저장. 담당자가 정해진 할 일은 업무로 등록(또는 이미 등록된 업무를 고침)한다. 저장된 회의록 id 반환 */
-  saveMeeting: (m: Partial<Meeting> & { title: string }, items: MeetingItem[]) => Promise<string>;
+  saveMeeting: (m: Partial<Meeting> & { title: string }, items: MeetingItem[], opts?: { draft?: boolean; quiet?: boolean }) => Promise<string>;
   deleteMeeting: (id: string) => Promise<void>;
   linkTasks: (taskIds: string[], kpiId: string) => Promise<void>;
   toast: (msg: string) => void;
@@ -85,9 +85,22 @@ export function AppProvider({ backend, initial, me, children, onToast }: {
     saveMyKpi: (k, ok) => run(() => backend.saveMyKpi(k, me!.id, me?.role === 'lead'), ok || '✓ 저장되었습니다'),
     decideKpi: (id, s, c) => run(() => backend.decideKpi(id, s, c), s === 'approved' ? '✓ 승인했습니다' : '반려했습니다'),
     saveReview: r => run(() => backend.saveReview(r), '✓ 실적을 저장했습니다'),
-    saveMeeting: async (m, items) => {
+    saveMeeting: async (m, items, opts) => {
+      // 임시 저장: 회의록·할 일만 보관하고 업무 등록은 하지 않는다
+      if (opts?.draft) {
+        try {
+          const id = await backend.upsertMeeting({ ...m, status: 'draft' });
+          await backend.replaceMeetingItems(id, items.filter(i => i.content.trim()).map(i => ({ ...i, content: i.content.trim() })));
+          await reload();
+          if (!opts.quiet) onToast('✓ 임시 저장했습니다 (할 일은 최종 저장 때 업무로 등록됩니다)');
+          return id;
+        } catch (e: any) {
+          if (!opts.quiet) onToast('임시 저장 실패: ' + (e?.message || e));
+          throw e;
+        }
+      }
       try {
-        const id = await backend.upsertMeeting(m);
+        const id = await backend.upsertMeeting({ ...m, status: 'final' });
         // 할 일의 메인 업무: 회의록의 메인 업무, 없으면 회의 제목으로 메인 업무를 만든다
         let groupId = m.group_id || null;
         const needTask = items.some(i => i.content.trim() && i.assignee_id);
