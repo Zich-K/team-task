@@ -4,7 +4,7 @@ import type { TaskView } from '../lib/types';
 import { addDays, fmtDate, formatWeekLabel, getMonday, isLongRunning, normTitle, parseDate, sundayOf, taskInWeek, toISODate } from '../lib/logic';
 import { GroupedTable } from '../components/GroupedTable';
 import { GroupList, StatusPicker } from '../components/GroupList';
-import { Avatar, Legend, Metric, Seg, Toggle } from '../components/ui';
+import { Avatar, Legend, Metric, Seg, Toggle, titleOf } from '../components/ui';
 
 export interface PageProps {
   monday: Date;
@@ -186,7 +186,7 @@ export function Dashboard({ search, onEdit, go }: PageProps) {
                 <button key={p.id} className={`person${member === p.id ? ' on' : ''}`} onClick={() => setMember(member === p.id ? '' : p.id)}>
                   <Avatar name={p.name} color={p.color} size={34} />
                   <div className="person-main">
-                    <div className="person-name">{p.name}<span className="small muted"> · {p.role === 'lead' ? '팀장' : '팀원'}</span></div>
+                    <div className="person-name">{p.name}<span className="small muted"> · {titleOf(p)}</span></div>
                     <div className="person-stats">
                       <span><b>{open.length}</b> 진행·예정</span>
                       <span className={week ? 'warn-t' : ''}><b>{week}</b> 이번 주 마감</span>

@@ -6,7 +6,7 @@ import { demoBackend, DEMO_PROFILE_ID } from './lib/demo';
 import { AppProvider, useApp } from './lib/store';
 import type { AppData, Profile, TaskView } from './lib/types';
 import { addDays, formatWeekLabel, getMonday } from './lib/logic';
-import { Avatar, Icon } from './components/ui';
+import { Avatar, Icon, titleOf } from './components/ui';
 import { TaskModal, type TaskDraft } from './components/TaskModal';
 import { Dashboard, Members, Team, type PageProps } from './pages/Lists';
 import { Briefing } from './pages/Briefing';
@@ -135,7 +135,7 @@ function Shell({ me }: { me: Profile }) {
               <>
                 <div style={{ position: 'fixed', inset: 0, zIndex: 150 }} onClick={() => setUserMenu(false)} />
                 <div className="menu user-menu">
-                  <div style={{ padding: '6px 8px' }}><b>{me.name}</b><div className="small muted">{me.role === 'lead' ? '팀장' : '팀원'}{me.email ? ` · ${me.email}` : ''}</div></div>
+                  <div style={{ padding: '6px 8px' }}><b>{me.name}</b><div className="small muted">{titleOf(me)}{me.email ? ` · ${me.email}` : ''}</div></div>
                   <a className="menu-link" href={`${import.meta.env.BASE_URL}install.html`}>휴대폰 홈 화면에 추가하는 방법</a>
                   {!IS_DEMO && <button onClick={() => supabase.auth.signOut()}>로그아웃</button>}
                 </div>

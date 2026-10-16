@@ -13,6 +13,10 @@ export const COLOR_MAP: Record<string, { bg: string; text: string }> = {
 };
 export const COLORS = Object.keys(COLOR_MAP);
 
+/** 화면에 보이는 직책. 저장된 직책이 없으면 권한으로 정한다 */
+export const TITLES = ['팀원', '팀장', '실장'] as const;
+export const titleOf = (p: { title?: string | null; role: string }) => p.title || (p.role === 'lead' ? '팀장' : '팀원');
+
 /** 아바타 글자: 세 글자 한글 이름은 이름 첫 글자(김승현 → 승). 성이 같은 팀원끼리 구분되게 */
 export const initial = (name: string) =>
   !name ? '?' : /^[가-힣]{3}$/.test(name) ? name[1] : name[0];

@@ -8,6 +8,8 @@ export interface Profile {
   name: string;
   email: string | null;
   role: Role;
+  /** 화면에 보이는 직책 (팀원/팀장/실장). 팀장·실장은 관리 권한 */
+  title?: '팀원' | '팀장' | '실장' | null;
   color: string;
   sort_order: number;
   active: boolean;

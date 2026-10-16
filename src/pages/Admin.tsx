@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../lib/store';
 import { KPI_STATUS_LABEL, type Kpi, type TaskGroup } from '../lib/types';
 import { normTitle, similarity } from '../lib/logic';
-import { Avatar, COLORS, Icon, Modal, Seg } from '../components/ui';
+import { Avatar, COLORS, Icon, Modal, Seg, TITLES, titleOf } from '../components/ui';
 import { exportExcel, importExcel } from '../lib/excel';
 import type { PageProps } from './Lists';
 import { KpiSuggest } from './KpiSuggest';
@@ -167,7 +167,7 @@ function Kpis() {
 function People() {
   const { data, views, backend, reload, toast, isLead, me } = useApp();
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', role: 'member' as 'lead' | 'member', color: 'teal' });
+  const [form, setForm] = useState({ name: '', email: '', title: '팀원' as typeof TITLES[number], color: 'teal' });
 
   async function save(id: string, patch: Record<string, unknown>, ok = '✓ 저장되었습니다') {
     try { await backend.saveProfile({ id, ...patch }); await reload(); toast(ok); }
@@ -179,9 +179,9 @@ function People() {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast('이메일 형식을 확인해주세요'); return; }
     if (data.profiles.some(p => p.email?.toLowerCase() === email)) { toast('이미 등록된 이메일입니다'); return; }
     try {
-      await backend.addProfile({ name: form.name.trim(), email, role: form.role, color: form.color });
+      await backend.addProfile({ name: form.name.trim(), email, title: form.title, role: form.title === '팀원' ? 'member' : 'lead', color: form.color });
       await reload(); toast(`✓ ${form.name} 님을 추가했습니다`);
-      setAdding(false); setForm({ name: '', email: '', role: 'member', color: 'teal' });
+      setAdding(false); setForm({ name: '', email: '', title: '팀원', color: 'teal' });
     } catch (e: any) { toast('실패: ' + (e.message || e)); }
   }
   async function resetLogin(id: string, name: string) {
@@ -212,9 +212,10 @@ function People() {
               </div>
               {isLead ? (
                 <div className="pa-fields">
-                  <label><span>역할</span>
-                    <select className="select select-sm" value={p.role} onChange={e => save(p.id, { role: e.target.value }, e.target.value === 'lead' ? `✓ ${p.name} 님을 팀장으로 지정했습니다` : '✓ 팀원으로 바꿨습니다')}>
-                      <option value="lead">팀장</option><option value="member">팀원</option>
+                  <label><span>직책</span>
+                    <select className="select select-sm" value={titleOf(p)} title="팀장·실장은 KPI 승인·평가·팀원 관리 권한을 가집니다"
+                      onChange={e => { const t = e.target.value; save(p.id, { title: t, role: t === '팀원' ? 'member' : 'lead' }, `✓ ${p.name} 님 직책을 ${t}(으)로 바꿨습니다`); }}>
+                      {TITLES.map(t => <option key={t}>{t}</option>)}
                     </select></label>
                   <label className="pa-email"><span>로그인 이메일</span>
                     <input className="input" defaultValue={p.email || ''} placeholder="회사 이메일" disabled={!!p.auth_user_id}
@@ -230,7 +231,7 @@ function People() {
                   </div>
                 </div>
               ) : (
-                <div className="small muted">{p.role === 'lead' ? '팀장' : '팀원'} · {p.email}</div>
+                <div className="small muted">{titleOf(p)} · {p.email}</div>
               )}
             </div>
           ))}
@@ -242,8 +243,9 @@ function People() {
           <div className="field"><label>이름</label><input className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} autoFocus /></div>
           <div className="field"><label>회사 이메일 (로그인에 사용)</label><input className="input" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="name@computer.co.kr" /></div>
           <div className="grid-2">
-            <div className="field"><label>역할</label>
-              <select className="select" value={form.role} onChange={e => setForm({ ...form, role: e.target.value as 'lead' | 'member' })}><option value="member">팀원</option><option value="lead">팀장</option></select></div>
+            <div className="field"><label>직책</label>
+              <select className="select" value={form.title} onChange={e => setForm({ ...form, title: e.target.value as typeof TITLES[number] })}>{TITLES.map(t => <option key={t}>{t}</option>)}</select>
+              <div className="hint">팀장·실장은 관리 권한을 가집니다</div></div>
             <div className="field"><label>색</label>
               <select className="select" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })}>{COLORS.map(c => <option key={c}>{c}</option>)}</select></div>
           </div>

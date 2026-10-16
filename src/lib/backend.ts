@@ -37,7 +37,7 @@ export interface Backend {
   replaceMeetingItems(meetingId: string, items: MeetingItem[]): Promise<void>;
   deleteMeeting(id: string): Promise<void>;
   saveProfile(p: Pick<Profile, 'id'> & Partial<Profile>): Promise<void>;
-  addProfile(p: Pick<Profile, 'name' | 'email' | 'role' | 'color'>): Promise<void>;
+  addProfile(p: Pick<Profile, 'name' | 'email' | 'role' | 'color' | 'title'>): Promise<void>;
   /** 팀장: 로그인 초기화 (비밀번호 분실 시). 기록은 유지 */
   resetLogin(profileId: string): Promise<void>;
   listEvaluations(): Promise<{ evaluations: Evaluation[]; items: EvaluationItem[] }>;
