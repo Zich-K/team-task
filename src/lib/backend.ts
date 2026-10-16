@@ -30,6 +30,8 @@ export interface Backend {
   saveMyKpi(k: Partial<Kpi> & { title: string }, meId: string, asLead: boolean): Promise<void>;
   /** 팀장: 승인/반려 */
   decideKpi(id: string, status: 'approved' | 'rejected', comment: string): Promise<void>;
+  /** KPI 삭제: active = false 로 숨기고, 메인 업무 기본 KPI 로 쓰이던 곳은 비운다 (업무의 연결 기록은 그대로) */
+  deleteKpi(id: string, asLead: boolean): Promise<void>;
   saveReview(r: KpiReview): Promise<void>;
   /** 회의록 저장 (id 없으면 새로). 저장된 id 를 돌려준다 */
   upsertMeeting(m: Partial<Meeting> & { title: string }): Promise<string>;
@@ -140,6 +142,11 @@ export const supabaseBackend: Backend = {
     const created = must(await supabase.from('kpis').insert({ ...row, created_by: meId, owner_text: me.data?.name || '' }).select('id').single()) as { id: string };
     // 팀원은 DB 가 자동으로 담당자를 넣고, 팀장은 직접 넣는다
     if (asLead) must(await supabase.from('kpi_owners').insert({ kpi_id: created.id, profile_id: meId }));
+  },
+  async deleteKpi(id, asLead) {
+    // 팀원은 승인 상태를 유지한 채 고칠 수 없으므로 작성 중으로 돌려 숨긴다
+    must(await supabase.from('kpis').update(asLead ? { active: false } : { active: false, status: 'draft' }).eq('id', id));
+    must(await supabase.from('task_groups').update({ kpi_id: null }).eq('kpi_id', id));
   },
   async decideKpi(id, status, comment) {
     must(await supabase.from('kpis').update({ status, lead_comment: comment }).eq('id', id));

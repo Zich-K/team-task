@@ -33,8 +33,11 @@ export function StatusPicker({ t }: { t: TaskView }) {
 
 /** 메인 업무의 기본 KPI 지정. 고르면 KPI 가 비어 있는 서브 업무에도 채운다 (다른 KPI 가 있는 업무는 그대로) */
 export function GroupKpiPicker({ groupId }: { groupId: string }) {
-  const { data, approvedKpis, setGroupKpi } = useApp();
+  const { data, approvedKpis, setGroupKpi, isLead, me, kpisOf } = useApp();
   const [at, setAt] = useState<DOMRect | null>(null);
+  // 팀원은 본인 담당 KPI 만, 팀장은 전체
+  const mine = kpisOf(me?.id);
+  const options = isLead ? approvedKpis : approvedKpis.filter(x => mine.has(x.id));
   const g = data.groups.find(x => x.id === groupId);
   if (!g) return null;
   const k = data.kpis.find(x => x.id === g.kpi_id);
@@ -47,9 +50,9 @@ export function GroupKpiPicker({ groupId }: { groupId: string }) {
       </span>
       {at && (
         <Popover anchor={at} width={310} height={340} className="menu kpi-menu" onClose={() => setAt(null)}>
-          <div className="small muted" style={{ padding: '4px 8px 6px' }}>「{g.title}」 기본 KPI — KPI 없는 업무에도 적용됩니다</div>
+          <div className="small muted" style={{ padding: '4px 8px 6px' }}>「{g.title}」 기본 KPI — 그 KPI 담당자의 업무 중 KPI 없는 업무에도 적용됩니다</div>
           <button className={!g.kpi_id ? 'on' : ''} onClick={() => pick(null)}>일상 업무 (KPI 없음)</button>
-          {approvedKpis.map(x => (
+          {options.map(x => (
             <button key={x.id} className={g.kpi_id === x.id ? 'on' : ''} onClick={() => pick(x.id)}>
               <span className="badge badge-kpi">{x.id}</span> {x.title}
             </button>
@@ -65,7 +68,7 @@ function QuickAdd({ groupId, mainTitle, defaultAssignee, onDetail, onClose }: {
   groupId: string; mainTitle: string; defaultAssignee: string | null;
   onDetail?: (d: { mainTitle: string; assigneeId?: string }) => void; onClose: () => void;
 }) {
-  const { data, views, people, saveTask } = useApp();
+  const { data, views, people, saveTask, kpisOf } = useApp();
   const [sub, setSub] = useState('');
   const [who, setWho] = useState(defaultAssignee || people[0]?.id || '');
   const [due, setDue] = useState('');
@@ -76,11 +79,13 @@ function QuickAdd({ groupId, mainTitle, defaultAssignee, onDetail, onClose }: {
     const name = sub.trim();
     if (!name || busy) return;
     setBusy(true);
+    // 메인 업무의 기본 KPI 는 담당자의 KPI 일 때만 따라간다
+    const groupKpi = data.groups.find(g => g.id === groupId)?.kpi_id || null;
     try {
       await saveTask({
         group_id: groupId, sub_title: name, title: name, assignee_id: who || null, status: '예정',
         start_date: new Date().toISOString().slice(0, 10), end_date: due || null,
-        kpi_id: data.groups.find(g => g.id === groupId)?.kpi_id || null, priority: 2,
+        kpi_id: groupKpi && kpisOf(who).has(groupKpi) ? groupKpi : null, priority: 2,
       });
       setSub('');
     } finally { setBusy(false); }

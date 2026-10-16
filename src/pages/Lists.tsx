@@ -31,7 +31,7 @@ const FOCUS_LABEL: Record<Focus, string> = { open: '진행·예정 업무', all:
 
 /** 대시보드 KPI 현황: 올해 KPI 별 연결 업무·완료, 이번 분기 진행, 사람별 연계율. KPI 를 누르면 아래 목록이 그 KPI 업무로 걸러진다 */
 function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (id: string) => void; go: (p: string) => void }) {
-  const { views, data, approvedKpis, isLead, me, people } = useApp();
+  const { views, data, approvedKpis, isLead, me, people, kpisOf } = useApp();
   const now = new Date();
   const year = now.getFullYear();
   const q = Math.floor(now.getMonth() / 3);
@@ -42,7 +42,10 @@ function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (
   const qTasks = views.filter(inQ);
   const owners = (id: string) => data.kpiOwners.filter(o => o.kpi_id === id).map(o => data.profiles.find(p => p.id === o.profile_id)).filter(Boolean);
   const pending = data.kpis.filter(k => k.status === 'submitted').length;
-  const suggest = views.filter(t => !t.kpi_id && data.groups.find(g => g.id === t.group_id)?.kpi_id && (isLead || t.assignee_id === me?.id)).length;
+  const suggest = views.filter(t => {
+    const gk = data.groups.find(g => g.id === t.group_id)?.kpi_id;
+    return !t.kpi_id && !!gk && kpisOf(t.assignee_id).has(gk) && (isLead || t.assignee_id === me?.id);
+  }).length;
   const cats = [...new Set(kpis.map(k => k.category))];
 
   return (

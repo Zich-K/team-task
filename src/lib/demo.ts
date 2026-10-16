@@ -210,6 +210,10 @@ export const demoBackend: Backend = {
     db.kpis.push({ ...KPI_BASE, sort_order: db.kpis.length, ...k, id, created_by: meId, owner_text: me.name });
     db.kpiOwners.push({ kpi_id: id, profile_id: meId });
   },
+  async deleteKpi(id, asLead) {
+    Object.assign(db.kpis.find(x => x.id === id)!, asLead ? { active: false } : { active: false, status: 'draft' });
+    db.groups.forEach(g => { if (g.kpi_id === id) g.kpi_id = null; });
+  },
   async decideKpi(id, status, comment) { Object.assign(db.kpis.find(x => x.id === id)!, { status, lead_comment: comment }); },
   async upsertMeeting(m) {
     if (m.id) { Object.assign(db.meetings.find(x => x.id === m.id)!, m, { updated_at: now() }); return m.id; }

@@ -12,7 +12,7 @@ interface Suggestion { groupId: string; title: string; kpiId: string; linked: nu
  * 이미 다른 KPI 가 지정된 업무는 건드리지 않는다. 팀원은 본인 업무만 보인다.
  */
 export function KpiSuggest() {
-  const { data, views, isLead, me, linkTasks } = useApp();
+  const { data, views, isLead, me, linkTasks, kpisOf } = useApp();
   const [skip, setSkip] = useState<Set<string>>(new Set());
   const [off, setOff] = useState<Set<string>>(new Set());
   const kpi = (id: string) => data.kpis.find(k => k.id === id);
@@ -24,7 +24,8 @@ export function KpiSuggest() {
     for (const g of data.groups) {
       const subs = views.filter(t => t.group_id === g.id);
       if (!subs.length) continue;
-      const empty = subs.filter(t => !t.kpi_id && mineOnly(t));
+      // 그 KPI 의 담당자 업무만 제안
+      const empty = subs.filter(t => !t.kpi_id && mineOnly(t) && !!g.kpi_id && kpisOf(t.assignee_id).has(g.kpi_id));
       if (g.kpi_id && empty.length) {
         suggestions.push({ groupId: g.id, title: g.title, kpiId: g.kpi_id, linked: subs.filter(t => t.kpi_id).length, total: subs.length, tasks: empty });
       }
@@ -34,7 +35,8 @@ export function KpiSuggest() {
     }
     suggestions.sort((a, b) => b.tasks.length - a.tasks.length);
     return { suggestions, mixed };
-  }, [data.groups, views, isLead, me?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.groups, data.kpiOwners, views, isLead, me?.id]);
 
   const live = suggestions.filter(s => !skip.has(s.groupId));
   const chosen = (s: Suggestion) => s.tasks.filter(t => !off.has(t.id));

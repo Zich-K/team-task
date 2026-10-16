@@ -104,7 +104,8 @@ function Groups() {
 }
 
 function Kpis() {
-  const { data, views, isLead, saveKpi, people } = useApp();
+  const { data, views, isLead, saveKpi, deleteKpi, people } = useApp();
+  const activeKpis = data.kpis.filter(k => k.active);
   const [edit, setEdit] = useState<{ k: Kpi; owners: string[] } | null>(null);
   const year = new Date().getFullYear();
   const blank = (): Kpi => ({
@@ -115,13 +116,13 @@ function Kpis() {
   const ownersOf = (id: string) => data.kpiOwners.filter(o => o.kpi_id === id).map(o => o.profile_id);
   return (
     <div className="card">
-      <div className="card-head"><span className="card-title">KPI ({data.kpis.length})</span><span className="spacer" />
+      <div className="card-head"><span className="card-title">KPI ({activeKpis.length})</span><span className="spacer" />
         {isLead && <button className="btn btn-primary btn-sm" onClick={() => setEdit({ k: blank(), owners: [] })}>KPI 추가</button>}</div>
       <div className="table-wrap">
         <table className="tbl">
           <thead><tr><th>번호</th><th>분류</th><th>KPI</th><th>담당</th><th>기간</th><th>연결 업무</th><th /></tr></thead>
           <tbody>
-            {data.kpis.map(k => (
+            {activeKpis.map(k => (
               <tr key={k.id}>
                 <td><span className="badge badge-kpi">{k.id}</span>{k.status !== 'approved' && <div className="small muted">{KPI_STATUS_LABEL[k.status]}</div>}</td>
                 <td className="small">{k.category}</td>
@@ -129,7 +130,10 @@ function Kpis() {
                 <td className="small">{ownersOf(k.id).map(id => data.profiles.find(p => p.id === id)?.name).join(', ')}</td>
                 <td className="small">{k.period}</td>
                 <td className="small">{views.filter(t => t.kpi_id === k.id).length}건</td>
-                <td>{isLead && <button className="btn btn-sm" onClick={() => setEdit({ k, owners: ownersOf(k.id) })}>수정</button>}</td>
+                <td className="actions">{isLead && <span className="row" style={{ gap: 4, flexWrap: 'nowrap' }}>
+                  <button className="btn btn-sm" onClick={() => setEdit({ k, owners: ownersOf(k.id) })}>수정</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => { const n = views.filter(t => t.kpi_id === k.id).length; if (confirm(`「${k.id} ${k.title}」 KPI 를 삭제할까요?${n ? `\n연결된 업무 ${n}건은 일상 업무로 표시됩니다 (업무 자체는 그대로).` : ''}`)) deleteKpi(k.id); }}>삭제</button>
+                </span>}</td>
               </tr>
             ))}
           </tbody>

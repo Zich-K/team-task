@@ -12,7 +12,7 @@ export interface TaskDraft {
 }
 
 export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () => void }) {
-  const { data, views, me, saveTask, ensureGroup, deleteTask, approvedKpis, setGroupKpi } = useApp();
+  const { data, views, me, saveTask, ensureGroup, deleteTask, approvedKpis, kpisOf, setGroupKpi } = useApp();
   const t = draft.task;
   const [mainTitle, setMainTitle] = useState(t?.mainTitle ?? draft.mainTitle ?? '');
   const [sub, setSub] = useState(t?.sub_title ?? '');
@@ -49,9 +49,17 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
     const pool = exact ? ownTasks.filter(v => v.group_id === exact.id) : ownTasks;
     return [...new Set([...pool].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(v => v.sub_title).filter(Boolean))].slice(0, 30);
   }, [ownTasks, exact]);
-  // 새 업무: 메인 업무를 고르면 그 메인 업무의 기본 KPI 를 따라간다 (직접 바꾸기 전까지)
+  // KPI 는 담당자에게 배정된 것만 고를 수 있다
+  const myKpis = kpisOf(assignee);
+  // 새 업무: 메인 업무를 고르면 그 메인 업무의 기본 KPI 를 따라간다 (직접 바꾸기 전까지, 담당자의 KPI 일 때만)
   const groupKpi = exact?.kpi_id || '';
-  useEffect(() => { if (!kpiTouched) setKpi(groupKpi); }, [groupKpi, kpiTouched]);
+  const groupKpiUsable = !!groupKpi && myKpis.has(groupKpi);
+  useEffect(() => { if (!kpiTouched) setKpi(groupKpiUsable ? groupKpi : ''); }, [groupKpi, groupKpiUsable, kpiTouched]);
+  // 담당자를 바꿨는데 고른 KPI 가 새 담당자의 KPI 가 아니면 비운다 (원래 연결돼 있던 KPI 는 유지)
+  useEffect(() => {
+    setKpi(k => (k && !myKpis.has(k) && k !== (t?.kpi_id || '') ? '' : k));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignee]);
   const offerGroup = !!kpi && kpi !== groupKpi;
   // 기본은: 묶음에 기본 KPI 가 없고, 새 업무이거나 이번에 KPI 를 바꾼 경우에만 체크 (단순 수정은 묶음에 영향 없음)
   const applyToGroup = offerGroup && (applyGroup ?? (!groupKpi && (!t || kpi !== (t.kpi_id || ''))));
@@ -60,10 +68,8 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
   const similar = !exact && mainTitle.trim()
     ? data.groups.filter(g => similarity(mainTitle, g.title) >= 0.75).slice(0, 3) : [];
 
-  // 담당자의 KPI 를 위로
-  const myKpis = new Set(data.kpiOwners.filter(o => o.profile_id === assignee).map(o => o.kpi_id));
-  // 번호 순서(K1, K2 …) 그대로 두고, 담당자 KPI 는 ★ 로만 표시
-  const kpiOptions = [...approvedKpis].sort((a, b) => a.sort_order - b.sort_order);
+  // 담당자의 KPI 만, 번호 순서(K1, K2 …)로. 이미 다른 KPI 가 연결된 업무를 고칠 때는 그 KPI 도 함께 보여 준다
+  const kpiOptions = approvedKpis.filter(k => myKpis.has(k.id) || k.id === (t?.kpi_id || '')).sort((a, b) => a.sort_order - b.sort_order);
 
   async function save() {
     if (!mainTitle.trim()) { setErr('메인 업무명을 입력해주세요'); return; }
@@ -144,12 +150,14 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
           <label>연결 KPI</label>
           <select className="select" value={kpi} onChange={e => { setKpi(e.target.value); setKpiTouched(true); }}>
             <option value="">일상 업무 (KPI 없음)</option>
-            {kpiOptions.map(k => <option key={k.id} value={k.id}>{myKpis.has(k.id) ? '★ ' : ''}{k.id} {k.title}</option>)}
+            {kpiOptions.map(k => <option key={k.id} value={k.id}>{k.id} {k.title}{myKpis.has(k.id) ? '' : ' (담당 아님)'}</option>)}
           </select>
           <div className="hint">
-            {groupKpi
-              ? (kpi === groupKpi ? `메인 업무 기본 KPI를 따릅니다` : `메인 업무 기본: ${kpiLabel(groupKpi)} — 이 업무만 다르게 지정`)
-              : '★ = 담당자의 KPI'}
+            {kpiOptions.length === 0
+              ? '담당자에게 배정된 KPI 가 없습니다 (내 KPI 에서 담당자로 지정하면 선택할 수 있습니다)'
+              : groupKpiUsable
+                ? (kpi === groupKpi ? `메인 업무 기본 KPI를 따릅니다` : `메인 업무 기본: ${kpiLabel(groupKpi)} — 이 업무만 다르게 지정`)
+                : '담당자에게 배정된 KPI 만 보입니다'}
           </div>
         </div>
         <div className="field">

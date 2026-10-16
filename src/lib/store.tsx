@@ -23,6 +23,10 @@ interface Ctx {
   saveKpi: (k: Kpi, owners: string[]) => Promise<void>;
   /** 승인된 KPI 만 (업무 연결·성과·평가에 사용) */
   approvedKpis: Kpi[];
+  /** 그 사람에게 배정된(담당) 승인 KPI id 들 */
+  kpisOf: (profileId: string | null | undefined) => Set<string>;
+  /** KPI 삭제 (기록은 남기고 목록·선택에서 뺌) */
+  deleteKpi: (id: string) => Promise<void>;
   saveMyKpi: (k: Partial<Kpi> & { title: string }, ok?: string) => Promise<void>;
   decideKpi: (id: string, status: 'approved' | 'rejected', comment: string) => Promise<void>;
   saveReview: (r: KpiReview) => Promise<void>;
@@ -70,6 +74,11 @@ export function AppProvider({ backend, initial, me, children, onToast }: {
     return g.id;
   }, [backend]);
 
+  // 그 사람에게 배정된(담당) 승인 KPI 인지
+  const owns = (pid: string | null | undefined, kpiId: string | null | undefined) => !!pid && !!kpiId
+    && data.kpiOwners.some(o => o.profile_id === pid && o.kpi_id === kpiId)
+    && data.kpis.some(k => k.id === kpiId && k.status === 'approved' && k.active);
+
   const value: Ctx = {
     backend, data, views, me, holidays, profileName, reload, ensureGroup,
     isLead: me?.role === 'lead',
@@ -81,7 +90,10 @@ export function AppProvider({ backend, initial, me, children, onToast }: {
     deleteTask: id => run(() => backend.deleteTask(id), '✓ 삭제되었습니다'),
     saveReportSettings: s => run(() => backend.saveReportSettings(s), '✓ 저장되었습니다'),
     saveKpi: (k, o) => run(() => backend.saveKpi(k, o), '✓ 저장되었습니다'),
-    approvedKpis: data.kpis.filter(k => k.status === 'approved'),
+    approvedKpis: data.kpis.filter(k => k.status === 'approved' && k.active),
+    kpisOf: pid => new Set(data.kpiOwners.filter(o => o.profile_id === pid).map(o => o.kpi_id)
+      .filter(id => data.kpis.some(k => k.id === id && k.status === 'approved' && k.active))),
+    deleteKpi: id => run(() => backend.deleteKpi(id, me?.role === 'lead'), 'KPI 를 삭제했습니다'),
     saveMyKpi: (k, ok) => run(() => backend.saveMyKpi(k, me!.id, me?.role === 'lead'), ok || '✓ 저장되었습니다'),
     decideKpi: (id, s, c) => run(() => backend.decideKpi(id, s, c), s === 'approved' ? '✓ 승인했습니다' : '반려했습니다'),
     saveReview: r => run(() => backend.saveReview(r), '✓ 실적을 저장했습니다'),
@@ -115,7 +127,7 @@ export function AppProvider({ backend, initial, me, children, onToast }: {
           if (it.assignee_id && !taskId) {
             const t = await backend.saveTask({
               group_id: groupId!, sub_title: content, title: content, assignee_id: it.assignee_id, status: '예정',
-              start_date: day, end_date: it.due_date, kpi_id: groupKpi, priority: 2, note: `회의: ${m.title}`,
+              start_date: day, end_date: it.due_date, kpi_id: owns(it.assignee_id, groupKpi) ? groupKpi : null, priority: 2, note: `회의: ${m.title}`,
             });
             taskId = t.id;
           } else if (taskId) {
@@ -137,7 +149,14 @@ export function AppProvider({ backend, initial, me, children, onToast }: {
       }
     },
     deleteMeeting: id => run(() => backend.deleteMeeting(id), '회의록을 삭제했습니다 (등록된 업무는 그대로 남습니다)'),
-    setGroupKpi: (g, k, fill) => run(() => backend.setGroupKpi(g, k, fill), k ? '✓ 메인 업무 KPI 를 정했습니다' : 'KPI 지정을 풀었습니다'),
+    // 비어 있는 업무 채우기는 그 KPI 의 담당자 업무에만
+    setGroupKpi: (g, k, fill) => run(async () => {
+      await backend.setGroupKpi(g, k, false);
+      if (fill && k) {
+        const ids = data.tasks.filter(t => t.group_id === g && !t.kpi_id && !t.deleted_at && owns(t.assignee_id, k)).map(t => t.id);
+        await backend.linkTasks(ids, k);
+      }
+    }, k ? '✓ 메인 업무 KPI 를 정했습니다' : 'KPI 지정을 풀었습니다'),
     linkTasks: (ids, k) => run(() => backend.linkTasks(ids, k), `✓ ${ids.length}건을 ${k} 에 연결했습니다`),
     toast: onToast,
   };
