@@ -29,19 +29,26 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
+  // 자동완성 추천은 담당자 본인의 업무에서만 (메인 업무명·서브 업무명 모두)
+  const ownTasks = useMemo(() => views.filter(v => v.assignee_id === assignee), [views, assignee]);
   const counts = useMemo(() => {
     const m = new Map<string, number>();
-    views.forEach(v => m.set(v.group_id, (m.get(v.group_id) || 0) + 1));
+    ownTasks.forEach(v => m.set(v.group_id, (m.get(v.group_id) || 0) + 1));
     return m;
-  }, [views]);
+  }, [ownTasks]);
 
   const key = normTitle(mainTitle);
   const exact = data.groups.find(g => g.norm_key === key);
   const suggestions = useMemo(() => {
     const q = mainTitle.trim();
-    const list = data.groups.map(g => ({ g, s: q ? Math.max(similarity(q, g.title), g.norm_key.includes(normTitle(q)) ? 0.9 : 0) : 0.5 }));
+    const own = data.groups.filter(g => counts.has(g.id));
+    const list = own.map(g => ({ g, s: q ? Math.max(similarity(q, g.title), g.norm_key.includes(normTitle(q)) ? 0.9 : 0) : 0.5 }));
     return list.filter(x => !q || x.s >= 0.35).sort((a, b) => b.s - a.s || (counts.get(b.g.id) || 0) - (counts.get(a.g.id) || 0)).slice(0, 8);
   }, [mainTitle, data.groups, counts]);
+  const subSuggestions = useMemo(() => {
+    const pool = exact ? ownTasks.filter(v => v.group_id === exact.id) : ownTasks;
+    return [...new Set([...pool].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(v => v.sub_title).filter(Boolean))].slice(0, 30);
+  }, [ownTasks, exact]);
   // 새 업무: 메인 업무를 고르면 그 메인 업무의 기본 KPI 를 따라간다 (직접 바꾸기 전까지)
   const groupKpi = exact?.kpi_id || '';
   useEffect(() => { if (!kpiTouched) setKpi(groupKpi); }, [groupKpi, kpiTouched]);
@@ -91,7 +98,7 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
         <label>메인 업무명</label>
         <input className="input" value={mainTitle} placeholder="예: 월간 손익마감 (기존 이름에서 고르면 같은 묶음으로 들어갑니다)"
           onChange={e => { setMainTitle(e.target.value); setOpen(true); setErr(''); }}
-          onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} autoFocus={!t} />
+          onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} autoFocus={!t && !draft.mainTitle} />
         {open && suggestions.length > 0 && (
           <div className="combo-list">
             {suggestions.map(({ g }) => (
@@ -107,7 +114,8 @@ export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () =>
       </div>
       <div className="field">
         <label>서브 업무명</label>
-        <input className="input" value={sub} onChange={e => setSub(e.target.value)} placeholder="예: A법인 손익마감 진행" />
+        <input className="input" value={sub} onChange={e => setSub(e.target.value)} placeholder="예: A법인 손익마감 진행" list="tm-subs" autoFocus={!t && !!draft.mainTitle} />
+        <datalist id="tm-subs">{subSuggestions.map(s => <option key={s} value={s} />)}</datalist>
       </div>
       <div className="grid-2">
         <div className="field">

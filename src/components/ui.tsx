@@ -78,6 +78,25 @@ export function AutoTextarea({ value, onChange, minRows = 3, ...rest }: {
   );
 }
 
+/**
+ * 버튼 옆에 뜨는 작은 선택 메뉴. 화면 맨 위(body)에 띄워서, 목록 줄의 효과(hover 등)에 따라 위치가 어긋나지 않게 한다.
+ * 아래 공간이 모자라면 버튼 위쪽으로 펼친다.
+ */
+export function Popover({ anchor, width = 150, height = 200, className = 'menu', onClose, children }: {
+  anchor: DOMRect; width?: number; height?: number; className?: string; onClose: () => void; children: ReactNode;
+}) {
+  const left = Math.max(8, Math.min(anchor.left, innerWidth - width - 8));
+  const below = anchor.bottom + 4 + height <= innerHeight - 8;
+  const top = below ? anchor.bottom + 4 : Math.max(8, anchor.top - 4 - height);
+  return createPortal(
+    <>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 2000 }} onClick={e => { e.stopPropagation(); onClose(); }} />
+      <div className={className} style={{ left, top, maxHeight: innerHeight - 16 }} onClick={e => e.stopPropagation()}>{children}</div>
+    </>,
+    document.body,
+  );
+}
+
 export function Toggle({ on, onChange, children }: { on: boolean; onChange: (v: boolean) => void; children: ReactNode }) {
   return (
     <button type="button" className={`toggle${on ? ' on' : ''}`} onClick={() => onChange(!on)}>

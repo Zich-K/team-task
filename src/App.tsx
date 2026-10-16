@@ -103,7 +103,7 @@ function Shell({ me }: { me: Profile }) {
   const props: PageProps = {
     monday, search,
     onEdit: (t: TaskView) => setDraft({ task: t }),
-    onAdd: d => setDraft({ assigneeId: d?.assigneeId }),
+    onAdd: d => setDraft({ assigneeId: d?.assigneeId, mainTitle: d?.mainTitle }),
     go: (id: string) => setPage(id as PageId),
   };
 

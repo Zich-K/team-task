@@ -10,7 +10,7 @@ export interface PageProps {
   monday: Date;
   search: string;
   onEdit: (t: TaskView) => void;
-  onAdd: (defaults?: { assigneeId?: string }) => void;
+  onAdd: (defaults?: { assigneeId?: string; mainTitle?: string }) => void;
   /** 다른 화면(탭)으로 이동 */
   go: (page: string) => void;
 }
@@ -98,8 +98,8 @@ function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (
   );
 }
 
-export function Dashboard({ search, onEdit, go }: PageProps) {
-  const { views, data, approvedKpis, people } = useApp();
+export function Dashboard({ search, onEdit, go, onAdd }: PageProps) {
+  const { views, data, approvedKpis, people, me } = useApp();
   const [focus, setFocus] = useState<Focus>('open');
   const [member, setMember] = useState('');
   const [kpi, setKpi] = useState('');
@@ -222,7 +222,8 @@ export function Dashboard({ search, onEdit, go }: PageProps) {
       </div>
       <div style={{ marginBottom: 10 }}><Legend /></div>
       <div className="card">
-        <GroupList tasks={filtered} onEdit={onEdit} empty={search ? '검색 결과가 없습니다' : undefined} expandAll={focus !== 'all' && focus !== 'done'} />
+        <GroupList tasks={filtered} onEdit={onEdit} empty={search ? '검색 결과가 없습니다' : undefined} expandAll={focus !== 'all' && focus !== 'done'}
+          defaultAssignee={member || me?.id || null} onAddDetail={onAdd} />
       </div>
       <div className="small muted" style={{ marginTop: 8 }}>업무를 누르면 수정, 상태 배지를 누르면 바로 상태를 바꿀 수 있습니다.</div>
     </>
@@ -261,7 +262,7 @@ export function Members({ search, onEdit, onAdd }: PageProps) {
         <button className="btn btn-primary" onClick={() => onAdd({ assigneeId: sel })}>업무 추가</button>
       </div>
       <div className="card">
-        <GroupList tasks={mine} showMember={false} onEdit={onEdit} />
+        <GroupList tasks={mine} showMember={false} onEdit={onEdit} defaultAssignee={sel} onAddDetail={onAdd} />
       </div>
     </>
   );
