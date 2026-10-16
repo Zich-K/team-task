@@ -57,6 +57,13 @@ export function InstallButton() {
           <p style={{ marginBottom: 12 }}>
             이 {p === 'pc' ? 'PC' : '휴대폰'}에 <b>업무관리 앱</b>이 이미 설치되어 있어서, 브라우저가 다시 설치하지 않습니다.
           </p>
+          <div className="callout warn" style={{ marginBottom: 14, fontSize: 13 }}>
+            <b>아이콘을 지웠는데도 이 안내가 나오면?</b> 아이콘만 지우면 브라우저 안에는 앱이 남아 있습니다.{' '}
+            {p === 'pc'
+              ? <>주소창에 <b>chrome://apps</b> (엣지는 <b>edge://apps</b>) 입력 → 「업무관리」 오른쪽 클릭 → <b>「Chrome에서 삭제」</b> 후 이 화면을 새로고침하고 다시 「앱 설치」를 누르세요.</>
+              : p === 'ios' ? <>홈 화면에서 다시 추가하면 됩니다 (아래 3번).</>
+              : <>휴대폰 <b>설정 → 애플리케이션 → 「업무관리」 → 삭제</b> 후 이 화면을 새로고침하고 다시 「앱 설치」를 누르세요.</>}
+          </div>
           <ol className="install-steps">
             <li><span className="num">1</span><span>{p === 'pc' ? '바탕화면이나 시작 메뉴' : '홈 화면'}의 <b>「업무관리」 아이콘</b>으로 여세요.</span></li>
             <li><span className="num">2</span><span>지금 그 아이콘은 <b>예전 사이트</b>로 열릴 수 있습니다. 정식 전환 후에는 같은 아이콘이 <b>새 화면으로</b> 열리니 다시 설치할 필요가 없습니다.</span></li>
