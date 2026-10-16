@@ -3,7 +3,8 @@
 # 사용: powershell -File scripts/publish-v2.ps1
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-$wt = Join-Path (Split-Path -Parent $repo) 'team-task-main'
+# 배포용 임시 복사본은 바탕화면이 아닌 사용자 폴더 안(AppData)에 둔다
+$wt = Join-Path $env:LOCALAPPDATA 'team-task-publish'
 Set-Location $repo
 
 $rev = (git rev-parse --short HEAD).Trim()
