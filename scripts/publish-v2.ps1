@@ -16,6 +16,11 @@ $m = Get-Content $mf -Raw -Encoding UTF8 | ConvertFrom-Json
 $m | Add-Member -NotePropertyName id -NotePropertyValue '/team-task/v2/' -Force
 $m.name = '팀 업무 관리 (시범)'
 $m.short_name = '업무관리 시범'
+# 이 기기에 시범판이나 예전 업무관리 앱이 이미 설치됐는지 화면에서 알 수 있게 둘 다 적는다
+$m.related_applications = @(
+  [pscustomobject]@{ platform = 'webapp'; url = 'https://zich-k.github.io/team-task/v2/manifest.json' },
+  [pscustomobject]@{ platform = 'webapp'; url = 'https://zich-k.github.io/team-task/manifest.json' }
+)
 [IO.File]::WriteAllText($mf, ($m | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding $false))
 
 git fetch origin main

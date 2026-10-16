@@ -39,18 +39,35 @@ const STEPS: Record<Platform, { title: string; steps: string[] }> = {
 
 /** 화면 위쪽 「앱 설치」 버튼. 바로 설치할 수 있으면 설치 창을, 아니면 기기에 맞는 방법을 보여준다 */
 export function InstallButton() {
-  const { installed, canPrompt, install } = useInstall();
+  const { installed, canPrompt, alreadyInstalled, install } = useInstall();
   const [help, setHelp] = useState(false);
   if (installed) return null;
   const p = platform();
   const guide = STEPS[p];
   const installNow = async () => { setHelp(false); await install(); };
+  const showInstalled = alreadyInstalled && !canPrompt;
   return (
     <>
-      <button type="button" className={`btn install-btn${canPrompt ? ' ready' : ''}`} onClick={async () => { if (!(await install())) setHelp(true); }} title="홈 화면·바탕화면에 아이콘 만들기">
-        {Icon.download}<span>앱 설치</span>
+      <button type="button" className={`btn install-btn${canPrompt ? ' ready' : ''}`} onClick={async () => { if (!(await install())) setHelp(true); }}
+        title={showInstalled ? '이 기기에 업무관리 앱이 이미 설치되어 있습니다' : '홈 화면·바탕화면에 아이콘 만들기'}>
+        {Icon.download}<span>{showInstalled ? '앱 설치됨' : '앱 설치'}</span>
       </button>
-      {help && (
+      {help && showInstalled && (
+        <Modal title="이미 설치되어 있습니다" onClose={() => setHelp(false)} actions={<button type="button" className="btn btn-primary" onClick={() => setHelp(false)}>확인</button>}>
+          <p style={{ marginBottom: 12 }}>
+            이 {p === 'pc' ? 'PC' : '휴대폰'}에 <b>업무관리 앱</b>이 이미 설치되어 있어서, 브라우저가 다시 설치하지 않습니다.
+          </p>
+          <ol className="install-steps">
+            <li><span className="num">1</span><span>{p === 'pc' ? '바탕화면이나 시작 메뉴' : '홈 화면'}의 <b>「업무관리」 아이콘</b>으로 여세요.</span></li>
+            <li><span className="num">2</span><span>지금 그 아이콘은 <b>예전 사이트</b>로 열릴 수 있습니다. 정식 전환 후에는 같은 아이콘이 <b>새 화면으로</b> 열리니 다시 설치할 필요가 없습니다.</span></li>
+            <li><span className="num">3</span><span>시범판을 따로 아이콘으로 두고 싶으면 {p === 'pc'
+              ? <>크롬 <b>⋮ → 「전송, 저장, 공유」 → 「페이지를 앱으로 설치」</b> (엣지는 <b>… → 「앱」 → 「이 사이트를 앱으로 설치」</b>)</>
+              : p === 'ios' ? <>사파리 <b>공유(□↑) → 「홈 화면에 추가」</b></>
+              : <>크롬 <b>⋮ → 「홈 화면에 추가」 → 「바로가기 만들기」</b></>}를 이용하세요.</span></li>
+          </ol>
+        </Modal>
+      )}
+      {help && !showInstalled && (
         <Modal title="앱 아이콘 만들기" onClose={() => setHelp(false)}
           actions={canPrompt
             ? <><button type="button" className="btn" onClick={() => setHelp(false)}>닫기</button><button type="button" className="btn btn-primary" onClick={installNow}>지금 설치</button></>

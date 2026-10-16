@@ -19,6 +19,12 @@ window.addEventListener('appinstalled', () => {
   emit();
 });
 
+// 이 기기에 업무관리 앱(예전 앱 또는 시범판)이 이미 설치돼 있는가 — 설치돼 있으면 크롬이 설치 창을 주지 않는다
+let alreadyInstalled = false;
+(navigator as any).getInstalledRelatedApps?.()
+  .then((apps: unknown[]) => { if (apps?.length) { alreadyInstalled = true; emit(); } })
+  .catch(() => {});
+
 /** 이미 앱(홈 화면 아이콘)으로 열려 있는가 */
 export const isStandalone = () =>
   window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
@@ -32,10 +38,10 @@ export function platform(): Platform {
   return 'pc';
 }
 
-let snap = { canPrompt: false, installed: false };
+let snap = { canPrompt: false, installed: false, alreadyInstalled: false };
 const getSnap = () => {
-  const next = { canPrompt: !!prompt, installed: installed || isStandalone() };
-  if (next.canPrompt !== snap.canPrompt || next.installed !== snap.installed) snap = next;
+  const next = { canPrompt: !!prompt, installed: installed || isStandalone(), alreadyInstalled };
+  if (next.canPrompt !== snap.canPrompt || next.installed !== snap.installed || next.alreadyInstalled !== snap.alreadyInstalled) snap = next;
   return snap;
 };
 

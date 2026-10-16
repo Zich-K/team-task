@@ -9,6 +9,9 @@
   "background_color": "#25282B",
   "theme_color": "#25282B",
   "orientation": "any",
+  "related_applications": [
+    { "platform": "webapp", "url": "https://zich-k.github.io/team-task/manifest.json" }
+  ],
   "icons": [
     {
       "src": "icon-192.png",
