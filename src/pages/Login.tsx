@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { InstallButton } from '../components/InstallButton';
 
 /** 이메일 + 비밀번호 로그인. 처음 사용하는 팀원은 '처음 사용' 에서 비밀번호를 만든다 (팀원 명단에 등록된 이메일만 가능). */
 export function Login() {
@@ -41,6 +42,7 @@ export function Login() {
         {mode === 'register' && <div className="field"><label>비밀번호 확인</label><input className="input" type="password" autoComplete="new-password" required value={pw2} onChange={e => setPw2(e.target.value)} /></div>}
         <button className="btn btn-primary" style={{ width: '100%', padding: 10 }} disabled={busy}>{busy ? '확인 중…' : mode === 'login' ? '로그인' : '비밀번호 만들고 시작하기'}</button>
         {err && <div className="err">{err}</div>}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}><InstallButton /></div>
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setErr(''); }}>
             {mode === 'login' ? '처음 사용하시나요?' : '이미 비밀번호가 있어요'}

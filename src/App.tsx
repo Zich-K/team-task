@@ -15,6 +15,7 @@ import { Report } from './pages/Report';
 import { Evaluation } from './pages/Evaluation';
 import { MyKpi } from './pages/MyKpi';
 import { Meetings } from './pages/Meetings';
+import { InstallButton } from './components/InstallButton';
 import { Admin } from './pages/Admin';
 import { Login } from './pages/Login';
 
@@ -126,6 +127,7 @@ function Shell({ me }: { me: Profile }) {
           )}
           <span className="spacer" />
           {showSearch && <div className="search">{Icon.search}<input className="input" placeholder="업무·담당자·KPI 검색" value={search} onChange={e => setSearch(e.target.value)} /></div>}
+          <InstallButton />
           <button className="btn btn-primary" onClick={() => setDraft({})}>{Icon.plus}<span className="hide-sm">업무 추가</span></button>
           <div className="user">
             <button className="user-btn" onClick={() => setUserMenu(!userMenu)} aria-label="내 정보"><Avatar name={me.name} color={me.color} size={30} /></button>
@@ -134,9 +136,6 @@ function Shell({ me }: { me: Profile }) {
                 <div style={{ position: 'fixed', inset: 0, zIndex: 150 }} onClick={() => setUserMenu(false)} />
                 <div className="menu user-menu">
                   <div style={{ padding: '6px 8px' }}><b>{me.name}</b><div className="small muted">{me.role === 'lead' ? '팀장' : '팀원'}{me.email ? ` · ${me.email}` : ''}</div></div>
-                  {(window as any).__installPrompt && (
-                    <button onClick={async () => { const p = (window as any).__installPrompt; (window as any).__installPrompt = null; setUserMenu(false); await p.prompt(); }}>이 기기에 앱으로 설치</button>
-                  )}
                   <a className="menu-link" href={`${import.meta.env.BASE_URL}install.html`}>휴대폰 홈 화면에 추가하는 방법</a>
                   {!IS_DEMO && <button onClick={() => supabase.auth.signOut()}>로그아웃</button>}
                 </div>

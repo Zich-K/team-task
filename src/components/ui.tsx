@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { Status } from '../lib/types';
 
 export const COLOR_MAP: Record<string, { bg: string; text: string }> = {
@@ -43,14 +44,16 @@ export function Modal({ title, onClose, children, wide, actions }: {
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [onClose]);
-  return (
+  // 어디서 열든(머리글·폼 안 등) 화면 맨 위에 따로 띄운다
+  return createPortal(
     <div className="overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className={`modal${wide ? ' modal-wide' : ''}`} role="dialog" aria-modal="true">
         <div className="modal-title">{title}</div>
         {children}
         {actions && <div className="modal-actions">{actions}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

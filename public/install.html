@@ -17,7 +17,7 @@
   h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
   .subtitle { font-size: 13px; color: rgba(255,255,255,.65); margin-bottom: 32px; letter-spacing: .08em; }
   .open-btn { display: block; text-align: center; text-decoration: none; background: #fff; color: #25282b; border-radius: 12px; padding: 16px 40px; font-size: 16px; font-weight: 700; width: 100%; max-width: 360px; margin-bottom: 14px; }
-  .install-btn { display: none; background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.45); border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; width: 100%; max-width: 360px; margin-bottom: 14px; cursor: pointer; font-family: inherit; }
+  .install-btn { display: block; background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.45); border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; width: 100%; max-width: 360px; margin-bottom: 14px; cursor: pointer; font-family: inherit; }
   .install-btn:hover { background: rgba(255,255,255,.08); }
   .url-box { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 12px 16px; margin-bottom: 32px; display: flex; align-items: center; gap: 10px; width: 100%; max-width: 360px; }
   .url-text { font-size: 12px; color: rgba(255,255,255,.75); flex: 1; word-break: break-all; }
@@ -96,8 +96,16 @@
   // 크롬·엣지가 설치를 허용하면 '이 기기에 앱으로 설치' 버튼을 보여준다
   var installPrompt = null;
   var installBtn = document.getElementById('install');
-  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installPrompt = e; installBtn.style.display = 'block'; });
-  installBtn.onclick = function () { if (!installPrompt) return; installPrompt.prompt(); installPrompt = null; installBtn.style.display = 'none'; };
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installPrompt = e; });
+  // 바로 설치할 수 없으면 아래 단계 안내로 이동해 강조
+  installBtn.onclick = function () {
+    if (installPrompt) { installPrompt.prompt(); installPrompt = null; return; }
+    var steps = document.querySelector('.steps');
+    steps.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    steps.style.transition = 'background .3s'; steps.style.background = 'rgba(255,255,255,.12)'; steps.style.borderRadius = '12px';
+    setTimeout(function () { steps.style.background = 'transparent'; }, 1500);
+  };
+  if (window.matchMedia('(display-mode: standalone)').matches) installBtn.style.display = 'none';
   window.addEventListener('appinstalled', function () { installBtn.style.display = 'none'; });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
 </script>
