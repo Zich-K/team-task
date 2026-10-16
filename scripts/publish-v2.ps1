@@ -10,6 +10,14 @@ $rev = (git rev-parse --short HEAD).Trim()
 npm run build -- --base=/team-task/v2/ --outDir dist-v2
 if ($LASTEXITCODE -ne 0) { throw 'build failed' }
 
+# 시범판은 기존 앱(/team-task/ 범위)과 별개 앱으로 설치되도록 이름·식별자를 구분한다
+$mf = Join-Path $repo 'dist-v2\manifest.json'
+$m = Get-Content $mf -Raw -Encoding UTF8 | ConvertFrom-Json
+$m | Add-Member -NotePropertyName id -NotePropertyValue '/team-task/v2/' -Force
+$m.name = '팀 업무 관리 (시범)'
+$m.short_name = '업무관리 시범'
+[IO.File]::WriteAllText($mf, ($m | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding $false))
+
 git fetch origin main
 if (-not (Test-Path $wt)) { git worktree add $wt origin/main --detach } else { git -C $wt checkout --detach origin/main }
 

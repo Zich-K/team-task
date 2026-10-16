@@ -2,6 +2,7 @@
   "name": "팀 업무 관리",
   "short_name": "업무관리",
   "description": "대원씨티에스 팀 업무 관리 앱",
+  "id": "/team-task/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
