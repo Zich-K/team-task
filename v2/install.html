@@ -40,6 +40,11 @@
   <h1>팀 업무 관리</h1>
   <p class="subtitle">DAEWON CTS</p>
 
+  <div id="inapp" style="display:none; width:100%; max-width:360px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.25); border-radius:12px; padding:14px; margin-bottom:14px; font-size:13.5px; line-height:1.6;">
+    지금은 <b id="inapp-name">메신저</b> 안에서 열린 화면이라 앱 설치가 되지 않습니다.
+    <a id="inapp-open" href="#" style="display:block; margin-top:10px; text-align:center; background:#fff; color:#25282b; border-radius:10px; padding:12px; font-weight:700; text-decoration:none;">크롬으로 열기</a>
+    <div style="margin-top:8px; font-size:12px; color:rgba(255,255,255,.7);">안 되면 메뉴의 「다른 브라우저로 열기」 → Chrome</div>
+  </div>
   <a class="open-btn" id="open" href="./">앱 열기</a>
   <button class="install-btn" id="install">이 기기에 앱으로 설치</button>
 
@@ -90,6 +95,30 @@
       document.getElementById(tab.dataset.os).classList.add('active');
     };
   });
+  // 카카오톡 등 메신저 안 브라우저는 설치가 안 되므로 크롬(아이폰은 사파리)으로 넘긴다
+  (function () {
+    var ua = navigator.userAgent, name = null;
+    if (/KAKAOTALK/i.test(ua)) name = '카카오톡';
+    else if (/NAVER/.test(ua) && !/Whale/.test(ua)) name = '네이버 앱';
+    else if (/Line\//.test(ua)) name = '라인';
+    else if (/Instagram/.test(ua)) name = '인스타그램';
+    else if (/FBAN|FBAV/.test(ua)) name = '페이스북';
+    else if (/Teams\//.test(ua)) name = 'Teams';
+    else if (/Android/.test(ua) && /; wv\)/.test(ua)) name = '앱 안 브라우저';
+    if (!name) return;
+    var ios = /iPhone|iPad|iPod/.test(ua);
+    document.getElementById('inapp').style.display = 'block';
+    document.getElementById('inapp-name').textContent = name;
+    var btn = document.getElementById('inapp-open');
+    btn.textContent = ios ? '사파리로 열기' : '크롬으로 열기';
+    btn.onclick = function (e) {
+      e.preventDefault();
+      var url = location.href;
+      if (/KAKAOTALK/i.test(ua)) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url); return; }
+      if (/Android/.test(ua)) { location.href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(url) + ';end'; return; }
+      location.href = url;
+    };
+  })();
   if (/iPhone|iPad|iPod/.test(navigator.userAgent)) document.querySelector('[data-os="ios"]').click();
   else if (/Android/.test(navigator.userAgent)) document.querySelector('[data-os="android"]').click();
 
