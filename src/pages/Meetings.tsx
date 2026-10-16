@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../lib/store';
 import type { Meeting, MeetingItem, TaskView } from '../lib/types';
 import { fmtYM, normTitle, parseDate } from '../lib/logic';
-import { Avatar } from '../components/ui';
+import { AutoTextarea, Avatar } from '../components/ui';
 import { StatusPicker } from '../components/GroupList';
 import type { PageProps } from './Lists';
 
@@ -333,11 +333,11 @@ function MeetingForm({ draft, initialItems, onClose, onEditTask }: {
 
       <section className="mt-sec">
         <div className="mt-sec-h">② 안건 <span className="small muted">선택</span></div>
-        <textarea className="textarea" value={m.agenda || ''} onChange={e => set({ agenda: e.target.value })} placeholder="미리 적어두면 회의 전에 팀원이 볼 수 있습니다" style={{ minHeight: 56 }} />
+        <AutoTextarea value={m.agenda || ''} onChange={v => set({ agenda: v })} placeholder="미리 적어두면 회의 전에 팀원이 볼 수 있습니다" minRows={2} />
       </section>
       <section className="mt-sec">
         <div className="mt-sec-h">③ 결정 사항 <span className="small muted">한 줄에 하나씩</span></div>
-        <textarea className="textarea" value={m.decisions || ''} onChange={e => set({ decisions: e.target.value })} placeholder={'4분기 목표 유지, 11월에 재점검\n대시보드 10/31 오픈'} />
+        <AutoTextarea value={m.decisions || ''} onChange={v => set({ decisions: v })} placeholder={'4분기 목표 유지, 11월에 재점검\n대시보드 10/31 오픈'} minRows={3} />
       </section>
       <section className="mt-sec">
         <div className="mt-sec-h">④ 할 일 <span className="small muted">담당자를 정하면 저장할 때 그 사람 업무로 등록됩니다</span></div>
@@ -363,7 +363,7 @@ function MeetingForm({ draft, initialItems, onClose, onEditTask }: {
       </section>
       <section className="mt-sec">
         <div className="mt-sec-h">⑤ 메모 · 논의 내용 <span className="small muted">선택 · 자유롭게</span></div>
-        <textarea className="textarea" value={m.notes || ''} onChange={e => set({ notes: e.target.value })} style={{ minHeight: 90 }} />
+        <AutoTextarea value={m.notes || ''} onChange={v => set({ notes: v })} minRows={4} placeholder="논의된 내용을 자유롭게 적으세요. 적는 만큼 칸이 늘어납니다" />
       </section>
       {err && <div className="err" style={{ marginBottom: 8 }}>{err}</div>}
       <div className="row">

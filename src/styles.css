@@ -155,6 +155,7 @@ a { color: var(--info); }
 .input, .select, .textarea { width: 100%; padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-size: 13px; }
 .input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .textarea { min-height: 72px; resize: vertical; }
+.textarea.auto-grow { min-height: 0; resize: none; overflow: hidden; line-height: 1.6; }
 .select-sm { width: auto; padding: 5px 9px; font-size: 12.5px; }
 .search { position: relative; }
 .search input { padding-left: 32px; width: 240px; }

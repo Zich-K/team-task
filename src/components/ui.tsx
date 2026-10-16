@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { Status } from '../lib/types';
 
@@ -58,6 +58,23 @@ export function Modal({ title, onClose, children, wide, actions }: {
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** 입력한 내용만큼 아래로 늘어나는 글상자 (최소 높이는 minRows 줄) */
+export function AutoTextarea({ value, onChange, minRows = 3, ...rest }: {
+  value: string; onChange: (v: string) => void; minRows?: number; placeholder?: string; style?: CSSProperties;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [value]);
+  return (
+    <textarea ref={ref} className="textarea auto-grow" rows={minRows} value={value}
+      onChange={e => onChange(e.target.value)} {...rest} />
   );
 }
 
