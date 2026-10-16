@@ -30,8 +30,9 @@ export function MyKpi(_: PageProps) {
     .sort((a, b) => a.sort_order - b.sort_order);
   const ownKpis = yearKpis.filter(k => k.created_by === who);
   const pending = data.kpis.filter(k => k.status === 'submitted' && k.active);
-  // 수정·삭제: 팀장은 모든 KPI, 팀원은 본인이 작성한 KPI
-  const canManage = (k: Kpi) => isLead || (!!k.created_by && k.created_by === me?.id);
+  // 수정: 전원 (승인된 KPI 와 본인이 작성한 KPI). 삭제: 팀장은 모든 KPI, 팀원은 본인이 작성한 KPI
+  const canEdit = (k: Kpi) => isLead || k.status === 'approved' || (!!k.created_by && k.created_by === me?.id);
+  const canDelete = (k: Kpi) => isLead || (!!k.created_by && k.created_by === me?.id);
   const remove = async (k: Kpi) => {
     const linked = views.filter(t => t.kpi_id === k.id).length;
     if (!confirm(`「${k.id} ${k.title}」 KPI 를 삭제할까요?${linked ? `\n연결된 업무 ${linked}건은 일상 업무로 표시됩니다 (업무 자체는 그대로).` : ''}`)) return;
@@ -59,11 +60,11 @@ export function MyKpi(_: PageProps) {
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div className="small muted">올해 연결 업무 {linkedCount(k.id)}건{teamAll && !k.created_by ? ' (팀 전체)' : ''}</div>
-          {canManage(k) && (
+          {canEdit(k) && (
             <div className="row" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
               <button className="btn btn-sm" onClick={() => setEdit({ ...k, owner_ids: data.kpiOwners.filter(o => o.kpi_id === k.id).map(o => o.profile_id) })}>수정</button>
-              <button className="btn btn-sm btn-danger" onClick={() => remove(k)}>삭제</button>
-              {editable && k.status !== 'approved' && k.status !== 'submitted' && <button className="btn btn-sm btn-primary" onClick={() => saveMyKpi({ id: k.id, title: k.title, status: isLead ? 'approved' : 'submitted' }, isLead ? '✓ 등록했습니다' : '✓ 제출했습니다')}>{isLead ? '등록' : '제출'}</button>}
+              {canDelete(k) && <button className="btn btn-sm btn-danger" onClick={() => remove(k)}>삭제</button>}
+              {editable && canDelete(k) && k.status !== 'approved' && k.status !== 'submitted' && <button className="btn btn-sm btn-primary" onClick={() => saveMyKpi({ id: k.id, title: k.title, status: isLead ? 'approved' : 'submitted' }, isLead ? '✓ 등록했습니다' : '✓ 제출했습니다')}>{isLead ? '등록' : '제출'}</button>}
             </div>
           )}
         </div>
@@ -155,16 +156,15 @@ function KpiForm({ draft, onClose }: { draft: Draft; onClose: () => void }) {
   const [owners, setOwners] = useState<string[]>(draft.owner_ids || []);
   const set = (patch: Partial<Kpi>) => setK(p => ({ ...p, ...patch }));
   const cats = [...new Set(data.kpis.map(x => x.category).concat(['인재육성', '프로세스개선', '장기프로젝트']))];
-  // 팀장이 이미 있는 KPI 를 고칠 때: 담당자까지 함께 바꾼다
-  const leadEdit = isLead && !!draft.id;
-  const reapprove = !isLead && draft.status === 'approved';
+  // 이미 있는 KPI 를 바로 고칠 때 (팀장: 모든 KPI, 팀원: 승인된 KPI): 담당자까지 함께 바꾸고 다시 승인받지 않는다
+  const directEdit = !!draft.id && (isLead || draft.status === 'approved');
   const save = async (status: KpiStatus) => {
     if (!k.title.trim()) { alert('KPI 내용을 입력해주세요'); return; }
-    if (leadEdit) {
+    if (directEdit) {
       const base = data.kpis.find(x => x.id === draft.id)!;
       const names = owners.map(id => data.profiles.find(p => p.id === id)?.name).filter(Boolean).join(',');
       const { owner_ids: _o, ...rest } = k;
-      await saveKpi({ ...base, ...rest, title: k.title.trim(), status: 'approved',
+      await saveKpi({ ...base, ...rest, title: k.title.trim(), status: isLead ? 'approved' : base.status,
         owner_text: owners.length && owners.length === people.length ? '공통' : names }, owners);
     } else {
       const { owner_ids: _o, ...rest } = k;
@@ -175,9 +175,8 @@ function KpiForm({ draft, onClose }: { draft: Draft; onClose: () => void }) {
   return (
     <Modal title={draft.id ? 'KPI 수정' : 'KPI 작성'} onClose={onClose}
       actions={<><button className="btn" onClick={onClose}>취소</button>
-        {!leadEdit && <button className="btn" onClick={() => save('draft')}>임시 저장</button>}
-        <button className="btn btn-primary" onClick={() => save(isLead ? 'approved' : 'submitted')}>{leadEdit ? '저장' : isLead ? '등록' : '팀장에게 제출'}</button></>}>
-      {reapprove && <div className="callout warn small" style={{ marginBottom: 12 }}>이미 승인된 KPI 입니다. 고쳐서 제출하면 다시 팀장 승인을 받아야 합니다.</div>}
+        {!directEdit && <button className="btn" onClick={() => save('draft')}>임시 저장</button>}
+        <button className="btn btn-primary" onClick={() => save(isLead ? 'approved' : 'submitted')}>{directEdit ? '저장' : isLead ? '등록' : '팀장에게 제출'}</button></>}>
       <div className="grid-2">
         <div className="field"><label>분류</label>
           <input className="input" list="kpi-cat-list" value={k.category || ''} onChange={e => set({ category: e.target.value })} />
@@ -197,14 +196,14 @@ function KpiForm({ draft, onClose }: { draft: Draft; onClose: () => void }) {
       </div>
       <div className="field"><label>비고</label>
         <textarea className="textarea" value={k.note || ''} onChange={e => set({ note: e.target.value })} placeholder="실행 계획, 참고 사항 등" /></div>
-      {leadEdit && (
+      {directEdit && (
         <div className="field"><label>담당자 <span className="muted" style={{ fontWeight: 400 }}>(업무에서 이 KPI 는 담당자에게만 보입니다)</span></label>
           <div className="row">{people.map(p => (
             <label key={p.id} className="row small" style={{ gap: 5 }}>
               <input type="checkbox" checked={owners.includes(p.id)} onChange={e => setOwners(o => e.target.checked ? [...o, p.id] : o.filter(x => x !== p.id))} />{p.name}
             </label>))}</div></div>
       )}
-      {!isLead && <div className="small muted">제출하면 팀장이 확인 후 승인합니다.</div>}
+      {!isLead && !directEdit && <div className="small muted">제출하면 팀장이 확인 후 승인합니다.</div>}
     </Modal>
   );
 }

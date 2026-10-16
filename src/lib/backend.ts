@@ -128,7 +128,9 @@ export const supabaseBackend: Backend = {
     must(await supabase.from('app_settings').upsert({ key: 'report_settings', value: s, updated_at: new Date().toISOString() }));
   },
   async saveKpi(k, ownerIds) {
-    must(await supabase.from('kpis').upsert({ id: k.id, ...pickKpi(k) }));
+    // 있는 KPI 는 고치고(팀원도 가능), 없으면 새로 만든다(팀장)
+    const updated = must(await supabase.from('kpis').update(pickKpi(k)).eq('id', k.id).select('id')) as unknown[];
+    if (!updated?.length) must(await supabase.from('kpis').insert({ id: k.id, ...pickKpi(k) }));
     must(await supabase.from('kpi_owners').delete().eq('kpi_id', k.id));
     if (ownerIds.length) must(await supabase.from('kpi_owners').insert(ownerIds.map(profile_id => ({ kpi_id: k.id, profile_id }))));
   },
