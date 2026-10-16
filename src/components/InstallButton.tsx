@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { platform, useInstall, type Platform } from '../lib/install';
+import { inAppBrowser, openInRealBrowser, platform, useInstall, type Platform } from '../lib/install';
 import { Icon, Modal } from './ui';
 
 const STEPS: Record<Platform, { title: string; steps: string[] }> = {
@@ -46,13 +46,24 @@ export function InstallButton() {
   const guide = STEPS[p];
   const installNow = async () => { setHelp(false); await install(); };
   const showInstalled = alreadyInstalled && !canPrompt;
+  const inApp = inAppBrowser();
   return (
     <>
       <button type="button" className={`btn install-btn${canPrompt ? ' ready' : ''}`} onClick={async () => { if (!(await install())) setHelp(true); }}
         title={showInstalled ? '이 기기에 업무관리 앱이 이미 설치되어 있습니다' : '홈 화면·바탕화면에 아이콘 만들기'}>
         {Icon.download}<span>{showInstalled ? '앱 설치됨' : '앱 설치'}</span>
       </button>
-      {help && showInstalled && (
+      {help && inApp && (
+        <Modal title="크롬에서 열어 주세요" onClose={() => setHelp(false)}
+          actions={<><button type="button" className="btn" onClick={() => setHelp(false)}>닫기</button>
+            <button type="button" className="btn btn-primary" onClick={openInRealBrowser}>{p === 'ios' ? '사파리로 열기' : '크롬으로 열기'}</button></>}>
+          <p style={{ marginBottom: 12 }}>
+            지금은 <b>{inApp}</b> 안에서 열린 화면이라 앱 설치를 할 수 없습니다. 아래 버튼을 누르면 {p === 'ios' ? '사파리' : '크롬'}으로 넘어가고, 거기서 「앱 설치」를 누르면 됩니다.
+          </p>
+          <div className="callout small">버튼이 동작하지 않으면 오른쪽 위(또는 아래) 메뉴에서 <b>「다른 브라우저로 열기」</b> → <b>{p === 'ios' ? 'Safari' : 'Chrome'}</b>을 고르세요.</div>
+        </Modal>
+      )}
+      {help && !inApp && showInstalled && (
         <Modal title="이미 설치되어 있습니다" onClose={() => setHelp(false)} actions={<button type="button" className="btn btn-primary" onClick={() => setHelp(false)}>확인</button>}>
           <p style={{ marginBottom: 12 }}>
             이 {p === 'pc' ? 'PC' : '휴대폰'}에 <b>업무관리 앱</b>이 이미 설치되어 있어서, 브라우저가 다시 설치하지 않습니다.
@@ -74,7 +85,7 @@ export function InstallButton() {
           </ol>
         </Modal>
       )}
-      {help && !showInstalled && (
+      {help && !inApp && !showInstalled && (
         <Modal title="앱 아이콘 만들기" onClose={() => setHelp(false)}
           actions={canPrompt
             ? <><button type="button" className="btn" onClick={() => setHelp(false)}>닫기</button><button type="button" className="btn btn-primary" onClick={installNow}>지금 설치</button></>
@@ -90,7 +101,8 @@ export function InstallButton() {
           </ol>
           {(p === 'android' || p === 'samsung') && (
             <div className="callout" style={{ marginTop: 14, fontSize: 12.5 }}>
-              메뉴에 「앱 설치」 대신 「앱에서 열기」만 보이면, 이전 업무관리 아이콘이 이미 설치되어 있는 것입니다. 그 아이콘을 그대로 쓰셔도 되고, 정식 전환 후에는 그 아이콘이 새 화면으로 열립니다.
+              메뉴에 <b>「링크 복사 · 다른 브라우저로 열기」</b>만 보이면 카카오톡 같은 메신저 안의 브라우저입니다. 「다른 브라우저로 열기」 → Chrome 을 고른 뒤 다시 설치하세요.<br />
+              메뉴에 「앱 설치」 대신 「앱에서 열기」만 보이면, 이전 업무관리 앱이 이미 설치되어 있는 것입니다. 그 아이콘을 그대로 쓰셔도 되고, 정식 전환 후에는 그 아이콘이 새 화면으로 열립니다.
             </div>
           )}
         </Modal>

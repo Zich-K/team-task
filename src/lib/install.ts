@@ -29,6 +29,33 @@ let alreadyInstalled = false;
 export const isStandalone = () =>
   window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
+/** 메신저·앱 안에서 열린 브라우저(설치 기능 없음)인가. 알 수 있으면 그 앱 이름 */
+export function inAppBrowser(): string | null {
+  const ua = navigator.userAgent;
+  if (/KAKAOTALK/i.test(ua)) return '카카오톡';
+  if (/NAVER\(inapp|NaverMatome|NAVER/.test(ua) && !/Whale/.test(ua)) return '네이버 앱';
+  if (/Line\//.test(ua)) return '라인';
+  if (/Instagram/.test(ua)) return '인스타그램';
+  if (/FBAN|FBAV/.test(ua)) return '페이스북';
+  if (/Teams\//.test(ua)) return 'Teams';
+  if (/Android/.test(ua) && /; wv\)/.test(ua)) return '앱 안 브라우저';
+  return null;
+}
+
+/** 지금 주소를 휴대폰 기본 브라우저(크롬·사파리)로 다시 연다 */
+export function openInRealBrowser() {
+  const url = location.href;
+  const ua = navigator.userAgent;
+  if (/KAKAOTALK/i.test(ua)) { location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(url)}`; return; }
+  if (/Android/.test(ua)) {
+    // 크롬을 직접 지정해서 연다 (크롬이 없으면 휴대폰이 알아서 다른 브라우저를 고르게 함)
+    const u = new URL(url);
+    location.href = `intent://${u.host}${u.pathname}${u.search}${u.hash}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+    return;
+  }
+  location.href = url;
+}
+
 export type Platform = 'ios' | 'samsung' | 'android' | 'pc';
 export function platform(): Platform {
   const ua = navigator.userAgent;
