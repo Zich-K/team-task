@@ -5,12 +5,17 @@ import { toViews } from './logic';
 
 interface Ctx {
   backend: Backend;
+  /** data.profiles 는 팀원(관리·작성 권한)만. 조회 권한(대표 등)은 담당자·참석자·통계에 나오지 않는다 */
   data: AppData;
+  /** 조회 권한까지 포함한 전체 명단 (관리 > 팀원 화면용) */
+  allProfiles: Profile[];
   views: TaskView[];
   me: Profile | null;
   /** 현재 활동 중인 팀원 (비활성 팀원은 목록·선택에서 빠지고, 지난 기록에는 이름이 남는다) */
   people: Profile[];
   isLead: boolean;
+  /** 조회 권한이 아니면 true — 저장·추가·수정 버튼을 보일지 */
+  canWrite: boolean;
   holidays: Set<string>;
   profileName: (id: string | null) => string;
   reload: () => Promise<void>;
@@ -48,12 +53,13 @@ export const useApp = () => {
 export function AppProvider({ backend, initial, me, children, onToast }: {
   backend: Backend; initial: AppData; me: Profile | null; children: ReactNode; onToast: (m: string) => void;
 }) {
-  const [data, setData] = useState(initial);
+  const [raw, setData] = useState(initial);
   useEffect(() => setData(initial), [initial]);
+  const data = useMemo(() => ({ ...raw, profiles: raw.profiles.filter(p => p.role !== 'viewer') }), [raw]);
 
   const views = useMemo(() => toViews(data.tasks, data.groups, data.profiles), [data]);
   const holidays = useMemo(() => new Set(data.holidays), [data.holidays]);
-  const profileName = useCallback((id: string | null) => data.profiles.find(p => p.id === id)?.name || '', [data.profiles]);
+  const profileName = useCallback((id: string | null) => raw.profiles.find(p => p.id === id)?.name || '', [raw.profiles]);
 
   const reload = useCallback(async () => setData(await backend.loadAll()), [backend]);
 
@@ -80,8 +86,9 @@ export function AppProvider({ backend, initial, me, children, onToast }: {
     && data.kpis.some(k => k.id === kpiId && k.status === 'approved' && k.active);
 
   const value: Ctx = {
-    backend, data, views, me, holidays, profileName, reload, ensureGroup,
+    backend, data, allProfiles: raw.profiles, views, me, holidays, profileName, reload, ensureGroup,
     isLead: me?.role === 'lead',
+    canWrite: me?.role !== 'viewer',
     people: data.profiles.filter(p => p.active),
     saveTask: (t, opts) => {
       if (t.id) setData(d => ({ ...d, tasks: d.tasks.map(x => (x.id === t.id ? { ...x, ...t } : x)) }));

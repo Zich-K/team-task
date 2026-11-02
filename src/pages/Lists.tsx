@@ -31,7 +31,7 @@ const FOCUS_LABEL: Record<Focus, string> = { open: '진행·예정 업무', all:
 
 /** 대시보드 KPI 현황: 올해 KPI 별 연결 업무·완료, 이번 분기 진행, 사람별 연계율. KPI 를 누르면 아래 목록이 그 KPI 업무로 걸러진다 */
 function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (id: string) => void; go: (p: string) => void }) {
-  const { views, data, approvedKpis, isLead, me, people, kpisOf } = useApp();
+  const { views, data, approvedKpis, isLead, me, people, kpisOf, canWrite } = useApp();
   const now = new Date();
   const year = now.getFullYear();
   const q = Math.floor(now.getMonth() / 3);
@@ -54,7 +54,7 @@ function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (
         <span className="card-title">KPI 현황</span><span className="card-sub">{year}년 · 이번 분기 {q + 1}분기</span>
         <span className="spacer" />
         {isLead && pending > 0 && <button className="chip chip-warn" onClick={() => go('mykpi')}>승인 대기 {pending}</button>}
-        {suggest > 0 && <button className="chip" onClick={() => go('admin')}>KPI 연결 제안 {suggest}건 →</button>}
+        {canWrite && suggest > 0 && <button className="chip" onClick={() => go('admin')}>KPI 연결 제안 {suggest}건 →</button>}
       </div>
       <div className="kpi-ov">
         <div className="kpi-ov-people">
@@ -102,7 +102,7 @@ function KpiOverview({ selected, onSelect, go }: { selected: string; onSelect: (
 }
 
 export function Dashboard({ search, onEdit, go, onAdd }: PageProps) {
-  const { views, data, approvedKpis, people, me } = useApp();
+  const { views, data, approvedKpis, people, me, canWrite } = useApp();
   const [focus, setFocus] = useState<Focus>('open');
   const [member, setMember] = useState('');
   const [kpi, setKpi] = useState('');
@@ -228,14 +228,15 @@ export function Dashboard({ search, onEdit, go, onAdd }: PageProps) {
         <GroupList tasks={filtered} onEdit={onEdit} empty={search ? '검색 결과가 없습니다' : undefined} expandAll={focus !== 'all' && focus !== 'done'}
           defaultAssignee={member || me?.id || null} onAddDetail={onAdd} />
       </div>
-      <div className="small muted" style={{ marginTop: 8 }}>업무를 누르면 수정, 상태 배지를 누르면 바로 상태를 바꿀 수 있습니다.</div>
+      <div className="small muted" style={{ marginTop: 8 }}>{canWrite ? '업무를 누르면 수정, 상태 배지를 누르면 바로 상태를 바꿀 수 있습니다.' : '업무를 누르면 자세한 내용을 볼 수 있습니다.'}</div>
     </>
   );
 }
 
 export function Members({ search, onEdit, onAdd }: PageProps) {
-  const { views, data, me, people } = useApp();
-  const [sel, setSel] = useState(me?.id || data.profiles[0]?.id || '');
+  const { views, me, people, canWrite } = useApp();
+  // 조회 권한(대표님)은 본인 업무가 없으니 첫 팀원부터
+  const [sel, setSel] = useState((canWrite && me?.id) || people[0]?.id || '');
   const [showDone, setShowDone] = useState(false);
   const searched = useSearch(views, search);
   const all = views.filter(t => t.assignee_id === sel);
@@ -262,7 +263,7 @@ export function Members({ search, onEdit, onAdd }: PageProps) {
       <div className="section-head">
         <Legend /><span className="spacer" />
         <Toggle on={showDone} onChange={setShowDone}>끝난 업무 포함</Toggle>
-        <button className="btn btn-primary" onClick={() => onAdd({ assigneeId: sel })}>업무 추가</button>
+        {canWrite && <button className="btn btn-primary" onClick={() => onAdd({ assigneeId: sel })}>업무 추가</button>}
       </div>
       <div className="card">
         <GroupList tasks={mine} showMember={false} onEdit={onEdit} defaultAssignee={sel} onAddDetail={onAdd} />

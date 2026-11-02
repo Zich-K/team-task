@@ -22,19 +22,21 @@ const toLocalInput = (iso: string) => {
 
 /** 회의록: 결정 사항과 할 일 중심. 할 일은 저장하면 담당자 업무로 등록된다 */
 export function Meetings({ search, onEdit }: PageProps) {
-  const { data } = useApp();
+  const { data, canWrite } = useApp();
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ m: Draft; items: MeetingItem[] } | null>(null);
   const [series, setSeries] = useState('');
 
-  const allSeries = [...new Set(data.meetings.map(m => m.series).filter(Boolean) as string[])];
+  // 조회 권한은 최종 저장된 회의록만 (DB 에서도 막혀 있음)
+  const meetings = canWrite ? data.meetings : data.meetings.filter(m => m.status !== 'draft');
+  const allSeries = [...new Set(meetings.map(m => m.series).filter(Boolean) as string[])];
   const itemsOf = (id: string) => data.meetingItems.filter(i => i.meeting_id === id);
   const q = normTitle(search);
-  const list = data.meetings
+  const list = meetings
     .filter(m => !series || m.series === series)
     .filter(m => !q || normTitle(`${m.title} ${m.agenda} ${m.decisions} ${m.notes} ${itemsOf(m.id).map(i => i.content).join(' ')}`).includes(q));
 
-  const open = data.meetings.find(m => m.id === openId);
+  const open = meetings.find(m => m.id === openId);
 
   const startNew = (base?: Meeting) => {
     setOpenId(null);
@@ -58,16 +60,16 @@ export function Meetings({ search, onEdit }: PageProps) {
   return (
     <>
       <div className="section-head">
-        <button className={`chip${!series ? ' chip-on' : ''}`} onClick={() => setSeries('')}>전체 {data.meetings.length}</button>
+        <button className={`chip${!series ? ' chip-on' : ''}`} onClick={() => setSeries('')}>전체 {meetings.length}</button>
         {allSeries.map(s => <button key={s} className={`chip${series === s ? ' chip-on' : ''}`} onClick={() => setSeries(series === s ? '' : s)}>{s}</button>)}
         <span className="spacer" />
-        <button className="btn btn-primary" onClick={() => startNew()}>+ 새 회의록</button>
+        {canWrite && <button className="btn btn-primary" onClick={() => startNew()}>+ 새 회의록</button>}
       </div>
       <div className="card">
         {list.map(m => <MeetingRow key={m.id} m={m} onClick={() => setOpenId(m.id)} />)}
         {!list.length && (
           <div className="empty">
-            {search ? '검색 결과가 없습니다' : <>아직 회의록이 없습니다.<br />「+ 새 회의록」에서 결정 사항과 할 일만 적어도 됩니다.</>}
+            {search ? '검색 결과가 없습니다' : canWrite ? <>아직 회의록이 없습니다.<br />「+ 새 회의록」에서 결정 사항과 할 일만 적어도 됩니다.</> : '아직 회의록이 없습니다.'}
           </div>
         )}
       </div>
@@ -141,7 +143,7 @@ function PrevItems({ m }: { m: Partial<Meeting> }) {
 function MeetingView({ m, onBack, onEditMeeting, onNext, onEditTask }: {
   m: Meeting; onBack: () => void; onEditMeeting: () => void; onNext: () => void; onEditTask: (t: TaskView) => void;
 }) {
-  const { data, deleteMeeting } = useApp();
+  const { data, deleteMeeting, canWrite } = useApp();
   const status = useItemStatus();
   const items = data.meetingItems.filter(i => i.meeting_id === m.id).map(i => ({ i, ...status(i) }));
   const group = data.groups.find(g => g.id === m.group_id);
@@ -151,8 +153,8 @@ function MeetingView({ m, onBack, onEditMeeting, onNext, onEditTask }: {
       <div className="mt-doc-head">
         <button className="btn btn-sm btn-ghost" onClick={onBack}>← 목록</button>
         <span className="spacer" />
-        {m.series && m.status !== 'draft' && <button className="btn btn-sm" onClick={onNext}>다음 회차 만들기</button>}
-        <button className="btn btn-sm btn-primary" onClick={onEditMeeting}>{m.status === 'draft' ? '이어서 작성' : '수정'}</button>
+        {canWrite && m.series && m.status !== 'draft' && <button className="btn btn-sm" onClick={onNext}>다음 회차 만들기</button>}
+        {canWrite && <button className="btn btn-sm btn-primary" onClick={onEditMeeting}>{m.status === 'draft' ? '이어서 작성' : '수정'}</button>}
       </div>
       <h2 className="mt-title">{m.title}{m.series && <span className="badge badge-soft" style={{ marginLeft: 8, verticalAlign: 3 }}>정기</span>}
         {m.status === 'draft' && <span className="badge badge-보류" style={{ marginLeft: 6, verticalAlign: 3 }}>작성 중 · 할 일 업무 미등록</span>}</h2>
@@ -182,7 +184,7 @@ function MeetingView({ m, onBack, onEditMeeting, onNext, onEditTask }: {
       {m.notes.trim() && <section className="mt-sec"><div className="mt-sec-h">⑤ 메모 · 논의 내용</div><div className="mt-text">{m.notes}</div></section>}
       <div className="row" style={{ justifyContent: 'space-between', marginTop: 18 }}>
         <span className="small muted">최근 수정 {new Date(m.updated_at).toLocaleString('ko-KR')}</span>
-        <button className="btn btn-sm btn-danger" onClick={async () => { if (confirm('회의록을 삭제할까요? 할 일로 등록된 업무는 그대로 남습니다.')) { await deleteMeeting(m.id); onBack(); } }}>삭제</button>
+        {canWrite && <button className="btn btn-sm btn-danger" onClick={async () => { if (confirm('회의록을 삭제할까요? 할 일로 등록된 업무는 그대로 남습니다.')) { await deleteMeeting(m.id); onBack(); } }}>삭제</button>}
       </div>
     </div>
   );

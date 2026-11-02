@@ -6,8 +6,9 @@ import { Popover, StatusBadge, Who } from './ui';
 
 /** 상태 배지를 누르면 바로 바꿀 수 있는 메뉴 */
 export function StatusPicker({ t }: { t: TaskView }) {
-  const { saveTask, toast } = useApp();
+  const { saveTask, toast, canWrite } = useApp();
   const [at, setAt] = useState<DOMRect | null>(null);
+  if (!canWrite) return <StatusBadge s={t.status} />;
   const pick = async (s: Status) => {
     setAt(null);
     if (s === t.status) return;
@@ -33,7 +34,7 @@ export function StatusPicker({ t }: { t: TaskView }) {
 
 /** 메인 업무의 기본 KPI 지정. 고르면 KPI 가 비어 있는 서브 업무에도 채운다 (다른 KPI 가 있는 업무는 그대로) */
 export function GroupKpiPicker({ groupId }: { groupId: string }) {
-  const { data, approvedKpis, setGroupKpi, isLead, me, kpisOf } = useApp();
+  const { data, approvedKpis, setGroupKpi, isLead, me, kpisOf, canWrite } = useApp();
   const [at, setAt] = useState<DOMRect | null>(null);
   // 팀원은 본인 담당 KPI 만, 팀장은 전체
   const mine = kpisOf(me?.id);
@@ -41,6 +42,7 @@ export function GroupKpiPicker({ groupId }: { groupId: string }) {
   const g = data.groups.find(x => x.id === groupId);
   if (!g) return null;
   const k = data.kpis.find(x => x.id === g.kpi_id);
+  if (!canWrite) return k ? <span className="badge badge-kpi" title={`기본 KPI: ${k.title}`}>{k.id}</span> : null;
   const pick = async (id: string | null) => { setAt(null); if (id !== g.kpi_id) await setGroupKpi(groupId, id, true); };
   return (
     <>
@@ -118,7 +120,7 @@ export function GroupList({ tasks, showMember = true, onEdit, empty = '해당하
   /** 「+」 줄의 「상세」: 업무 추가 창을 메인 업무가 채워진 채로 연다 */
   onAddDetail?: (d: { mainTitle: string; assigneeId?: string }) => void;
 }) {
-  const { holidays, data } = useApp();
+  const { holidays, data, canWrite } = useApp();
   const [adding, setAdding] = useState<string | null>(null);
   const color = (id: string | null) => data.profiles.find(p => p.id === id)?.color;
   const kpiTitle = (id: string | null) => data.kpis.find(k => k.id === id)?.title;
@@ -151,8 +153,8 @@ export function GroupList({ tasks, showMember = true, onEdit, empty = '해당하
               onKeyDown={e => { if (e.key === 'Enter') toggle(main); }}>
               <span className={`chev${isOpen ? ' open' : ''}`}>›</span>
               <span className="gl-title">{main}</span>
-              <button type="button" className="gl-add" title={`「${main}」에 서브 업무 추가`} aria-label="서브 업무 추가"
-                onClick={e => { e.stopPropagation(); setAdding(main); setOpen(p => new Set(p).add(main)); }}>+</button>
+              {canWrite && <button type="button" className="gl-add" title={`「${main}」에 서브 업무 추가`} aria-label="서브 업무 추가"
+                onClick={e => { e.stopPropagation(); setAdding(main); setOpen(p => new Set(p).add(main)); }}>+</button>}
               <GroupKpiPicker groupId={subs[0].group_id} />
               {late > 0 && <span className="badge badge-red">지연 {late}</span>}
               <span className="gl-meta hide-sm">{owners.join(', ')}</span>

@@ -20,13 +20,14 @@ import { Login } from './pages/Login';
 
 // 위클리 브리핑은 2026-10 사용자 결정으로 제거 (우선순위·칸별 메모 사용 0건, 대시보드가 같은 역할). 화면은 git 기록에 남아 있음
 type PageId = 'dashboard' | 'members' | 'team' | 'meetings' | 'perf' | 'report' | 'mykpi' | 'eval' | 'admin';
-const PAGES: { id: PageId; label: string; icon: ReactNode; week?: boolean; lead?: boolean; group: string; C: (p: PageProps) => ReactNode }[] = [
-  { id: 'dashboard', label: '대시보드', icon: Icon.dash, group: '업무', C: Dashboard },
-  { id: 'members', label: '팀원별 업무', icon: Icon.user, group: '업무', C: Members },
-  { id: 'team', label: '팀 합본', icon: Icon.team, week: true, group: '업무', C: Team },
-  { id: 'meetings', label: '회의록', icon: Icon.report, group: '업무', C: Meetings },
+// viewer: 조회 권한(대표님)에게도 보이는 메뉴 (2026-11 사용자 결정: 대시보드·팀원별 업무·팀 합본·회의록·성과 리포트)
+const PAGES: { id: PageId; label: string; icon: ReactNode; week?: boolean; lead?: boolean; viewer?: boolean; group: string; C: (p: PageProps) => ReactNode }[] = [
+  { id: 'dashboard', label: '대시보드', icon: Icon.dash, viewer: true, group: '업무', C: Dashboard },
+  { id: 'members', label: '팀원별 업무', icon: Icon.user, viewer: true, group: '업무', C: Members },
+  { id: 'team', label: '팀 합본', icon: Icon.team, week: true, viewer: true, group: '업무', C: Team },
+  { id: 'meetings', label: '회의록', icon: Icon.report, viewer: true, group: '업무', C: Meetings },
   { id: 'report', label: '주간 리포트', icon: Icon.report, week: true, group: '보고', C: Report },
-  { id: 'perf', label: '성과 리포트', icon: Icon.chart, group: '보고', C: Perf },
+  { id: 'perf', label: '성과 리포트', icon: Icon.chart, viewer: true, group: '보고', C: Perf },
   { id: 'mykpi', label: '내 KPI', icon: Icon.target, group: '평가', C: MyKpi },
   { id: 'eval', label: 'KPI 평가', icon: Icon.star, group: '평가', C: Evaluation },
   { id: 'admin', label: '관리', icon: Icon.gear, group: '설정', C: Admin },
@@ -82,9 +83,11 @@ function NoAccess() {
 }
 
 function Shell({ me }: { me: Profile }) {
-  const { isLead, views, data } = useApp();
+  const { isLead, canWrite, views, data } = useApp();
   const pendingKpi = data.kpis.filter(k => k.status === 'submitted').length;
-  const [page, setPage] = useState<PageId>(() => (PAGES.find(p => p.id === location.hash.slice(1))?.id) || 'dashboard');
+  const pages = canWrite ? PAGES : PAGES.filter(p => p.viewer);
+  const [page, setPageRaw] = useState<PageId>(() => (pages.find(p => p.id === location.hash.slice(1))?.id) || 'dashboard');
+  const setPage = (id: PageId) => { if (pages.some(p => p.id === id)) setPageRaw(id); };
   const [monday, setMonday] = useState(() => getMonday(new Date()));
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState<TaskDraft | null>(null);
@@ -93,7 +96,7 @@ function Shell({ me }: { me: Profile }) {
   useEffect(() => { history.replaceState(null, '', '#' + page); window.scrollTo(0, 0); }, [page]);
   // 선택된 탭이 화면 밖이면 보이도록 (휴대폰에서 탭 줄을 옆으로 밀어 쓸 때)
   useEffect(() => { document.querySelector('.tabs .tab.active')?.scrollIntoView({ block: 'nearest', inline: 'center' }); }, [page]);
-  const current = PAGES.find(p => p.id === page)!;
+  const current = pages.find(p => p.id === page)!;
   const thisMonday = getMonday(new Date());
   const isThisWeek = monday.getTime() === thisMonday.getTime();
   const open = views.filter(t => t.status !== '완료');
@@ -102,7 +105,7 @@ function Shell({ me }: { me: Profile }) {
 
   const props: PageProps = {
     monday, search,
-    onEdit: (t: TaskView) => setDraft({ task: t }),
+    onEdit: (t: TaskView) => setDraft({ task: t }), // 조회 권한이면 보기 전용으로 열린다
     onAdd: d => setDraft({ assigneeId: d?.assigneeId, mainTitle: d?.mainTitle }),
     go: (id: string) => setPage(id as PageId),
   };
@@ -134,7 +137,7 @@ function Shell({ me }: { me: Profile }) {
           <span className="spacer" />
           {showSearch && <div className="search">{Icon.search}<input className="input" placeholder="업무·담당자·KPI 검색" value={search} onChange={e => setSearch(e.target.value)} /></div>}
           <InstallButton />
-          <button className="btn btn-primary" onClick={() => setDraft({})}>{Icon.plus}<span className="hide-sm">업무 추가</span></button>
+          {canWrite && <button className="btn btn-primary" onClick={() => setDraft({})}>{Icon.plus}<span className="hide-sm">업무 추가</span></button>}
           <div className="user">
             <button className="user-btn" onClick={() => setUserMenu(!userMenu)} aria-label="내 정보"><Avatar name={me.name} color={me.color} size={30} /></button>
             {userMenu && (
@@ -150,7 +153,7 @@ function Shell({ me }: { me: Profile }) {
           </div>
         </div></div>
         <nav className="tabs" aria-label="메뉴">
-          {PAGES.map(p => (
+          {pages.map(p => (
             <button key={p.id} className={`tab${p.id === page ? ' active' : ''}${p.id === 'admin' ? ' tab-end' : ''}`} onClick={() => setPage(p.id)}>
               {label(p)}
               {p.id === 'mykpi' && isLead && pendingKpi > 0 && <span className="nav-badge">{pendingKpi}</span>}

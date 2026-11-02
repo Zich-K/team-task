@@ -1,15 +1,16 @@
 export type Status = '예정' | '진행 중' | '보류' | '완료';
 export const STATUSES: Status[] = ['예정', '진행 중', '보류', '완료'];
 
-export type Role = 'lead' | 'member';
+/** lead: 관리(팀장·실장) / member: 작성(팀원) / viewer: 조회만(대표 등 팀 밖에서 보는 분) */
+export type Role = 'lead' | 'member' | 'viewer';
 
 export interface Profile {
   id: string;
   name: string;
   email: string | null;
   role: Role;
-  /** 화면에 보이는 직책 (팀원/팀장/실장). 팀장·실장은 관리 권한 */
-  title?: '팀원' | '팀장' | '실장' | null;
+  /** 화면에 보이는 직책 (팀원/팀장/실장/대표). 팀장·실장은 관리 권한, 대표는 조회만 */
+  title?: '팀원' | '팀장' | '실장' | '대표' | null;
   color: string;
   sort_order: number;
   active: boolean;

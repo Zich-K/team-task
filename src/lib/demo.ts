@@ -20,6 +20,7 @@ function makeData(): AppData & { evaluations: Evaluation[]; items: EvaluationIte
     { id: 'p1', name: '박지훈', email: 'lead@example.com', role: 'lead', color: 'purple', sort_order: 0, active: true, auth_user_id: 'demo' },
     { id: 'p2', name: '이수진', email: null, role: 'member', color: 'blue', sort_order: 1, active: true, auth_user_id: null },
     { id: 'p3', name: '최도윤', email: null, role: 'member', color: 'pink', sort_order: 2, active: true, auth_user_id: null },
+    { id: 'p4', name: '정민호', email: 'ceo@example.com', role: 'viewer', title: '대표', color: 'teal', sort_order: 3, active: true, auth_user_id: 'demo-viewer' },
   ];
   const kpis: Kpi[] = [
     ['K1', '인재육성', '관리회계 실무 역량 강화', '주니어(이수진,최도윤)'],
@@ -41,7 +42,7 @@ function makeData(): AppData & { evaluations: Evaluation[]; items: EvaluationIte
       measure: '자격 취득 여부', target: '하반기 내 1개', weight: 10 },
   );
   const kpiOwners = kpis.flatMap(k => profiles
-    .filter(p => k.owner_text.includes('공통') || k.owner_text.includes(p.name))
+    .filter(p => p.role !== 'viewer' && (k.owner_text.includes('공통') || k.owner_text.includes(p.name)))
     .map(p => ({ kpi_id: k.id, profile_id: p.id })));
 
   const groupTitles = [
@@ -259,4 +260,5 @@ export const demoBackend: Backend = {
   async taskHistory() { return []; },
 };
 
-export const DEMO_PROFILE_ID = 'p1';
+// ?demo&viewer 로 열면 조회 권한(대표) 화면
+export const DEMO_PROFILE_ID = new URLSearchParams(location.search).has('viewer') ? 'p4' : 'p1';

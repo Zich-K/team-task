@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../lib/store';
 import { KPI_STATUS_LABEL, type Kpi, type TaskGroup } from '../lib/types';
 import { normTitle, similarity } from '../lib/logic';
-import { Avatar, COLORS, Icon, Modal, Seg, TITLES, titleOf } from '../components/ui';
+import { Avatar, COLORS, Icon, Modal, Seg, TITLES, roleOfTitle, titleOf } from '../components/ui';
 import { exportExcel, importExcel } from '../lib/excel';
 import type { PageProps } from './Lists';
 import { KpiSuggest } from './KpiSuggest';
@@ -169,7 +169,7 @@ function Kpis() {
 }
 
 function People() {
-  const { data, views, backend, reload, toast, isLead, me } = useApp();
+  const { data, allProfiles, views, backend, reload, toast, isLead, me } = useApp();
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', title: '팀원' as typeof TITLES[number], color: 'teal' });
 
@@ -181,9 +181,9 @@ function People() {
     const email = form.email.trim().toLowerCase();
     if (!form.name.trim()) { toast('이름을 입력해주세요'); return; }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast('이메일 형식을 확인해주세요'); return; }
-    if (data.profiles.some(p => p.email?.toLowerCase() === email)) { toast('이미 등록된 이메일입니다'); return; }
+    if (allProfiles.some(p => p.email?.toLowerCase() === email)) { toast('이미 등록된 이메일입니다'); return; }
     try {
-      await backend.addProfile({ name: form.name.trim(), email, title: form.title, role: form.title === '팀원' ? 'member' : 'lead', color: form.color });
+      await backend.addProfile({ name: form.name.trim(), email, title: form.title, role: roleOfTitle(form.title), color: form.color });
       await reload(); toast(`✓ ${form.name} 님을 추가했습니다`);
       setAdding(false); setForm({ name: '', email: '', title: '팀원', color: 'teal' });
     } catch (e: any) { toast('실패: ' + (e.message || e)); }
@@ -200,25 +200,26 @@ function People() {
       <div className="callout info" style={{ marginBottom: 14 }}>
         로그인은 여기 등록된 이메일로만 할 수 있습니다. 새 팀원은 추가 후 로그인 화면의 <b>「처음 사용하시나요?」</b>에서 직접 비밀번호를 만들면 됩니다.
         퇴사·이동한 팀원은 <b>비활성</b>으로 바꾸면 로그인과 담당자 목록에서 빠지고, 지난 업무·평가 기록은 그대로 남습니다.
+        직책을 <b>대표</b>로 등록하면 <b>조회만</b> 할 수 있습니다 (대시보드·팀원별 업무·팀 합본·회의록·성과 리포트, 회의록 알림 메일 받음). 담당자·참석자 목록에는 나오지 않습니다.
       </div>
       <div className="card">
         <div className="card-head"><span className="card-title">팀원 ({data.profiles.filter(p => p.active).length}명)</span><span className="spacer" />
           {isLead && <button className="btn btn-primary btn-sm" onClick={() => setAdding(true)}>+ 팀원 추가</button>}</div>
         <div className="people-admin">
-          {data.profiles.map(p => (
+          {allProfiles.map(p => (
             <div key={p.id} className={`pa-row${p.active ? '' : ' inactive'}`}>
               <div className="pa-who">
                 <Avatar name={p.name} color={p.color} size={32} />
                 <div style={{ minWidth: 0 }}>
                   <div><b>{p.name}</b>{p.id === me?.id && <span className="small muted"> (나)</span>}{!p.active && <span className="badge badge-soft" style={{ marginLeft: 6 }}>비활성</span>}</div>
-                  <div className="small muted">진행 중 업무 {openCount(p.id)}건 · {p.auth_user_id ? '✓ 가입함' : '아직 가입 전'}</div>
+                  <div className="small muted">{p.role === 'viewer' ? '조회만' : `진행 중 업무 ${openCount(p.id)}건`} · {p.auth_user_id ? '✓ 가입함' : '아직 가입 전'}</div>
                 </div>
               </div>
               {isLead ? (
                 <div className="pa-fields">
                   <label><span>직책</span>
-                    <select className="select select-sm" value={titleOf(p)} title="팀장·실장은 KPI 승인·평가·팀원 관리 권한을 가집니다"
-                      onChange={e => { const t = e.target.value; save(p.id, { title: t, role: t === '팀원' ? 'member' : 'lead' }, `✓ ${p.name} 님 직책을 ${t}(으)로 바꿨습니다`); }}>
+                    <select className="select select-sm" value={titleOf(p)} title="팀장·실장은 KPI 승인·평가·팀원 관리 권한, 대표는 조회만"
+                      onChange={e => { const t = e.target.value; save(p.id, { title: t, role: roleOfTitle(t) }, `✓ ${p.name} 님 직책을 ${t}(으)로 바꿨습니다`); }}>
                       {TITLES.map(t => <option key={t}>{t}</option>)}
                     </select></label>
                   <label className="pa-email"><span>로그인 이메일</span>
@@ -249,7 +250,7 @@ function People() {
           <div className="grid-2">
             <div className="field"><label>직책</label>
               <select className="select" value={form.title} onChange={e => setForm({ ...form, title: e.target.value as typeof TITLES[number] })}>{TITLES.map(t => <option key={t}>{t}</option>)}</select>
-              <div className="hint">팀장·실장은 관리 권한을 가집니다</div></div>
+              <div className="hint">팀장·실장은 관리 권한, 대표는 조회만 가능합니다</div></div>
             <div className="field"><label>색</label>
               <select className="select" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })}>{COLORS.map(c => <option key={c}>{c}</option>)}</select></div>
           </div>

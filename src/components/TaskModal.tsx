@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useApp } from '../lib/store';
 import { STATUSES, type Status, type TaskView } from '../lib/types';
 import { normTitle, similarity } from '../lib/logic';
-import { Modal } from './ui';
+import { Modal, StatusBadge } from './ui';
 
 export interface TaskDraft {
   task?: TaskView;
@@ -12,6 +12,34 @@ export interface TaskDraft {
 }
 
 export function TaskModal({ draft, onClose }: { draft: TaskDraft; onClose: () => void }) {
+  const { canWrite } = useApp();
+  if (canWrite) return <TaskEditor draft={draft} onClose={onClose} />;
+  return draft.task ? <TaskReadOnly t={draft.task} onClose={onClose} /> : null;
+}
+
+/** 조회 권한: 업무 내용만 보여 준다 */
+function TaskReadOnly({ t, onClose }: { t: TaskView; onClose: () => void }) {
+  const { data } = useApp();
+  const k = data.kpis.find(x => x.id === t.kpi_id);
+  const rows: [string, ReactNode][] = [
+    ['메인 업무', t.mainTitle],
+    ['서브 업무', t.sub_title || '-'],
+    ['담당자', t.member || '-'],
+    ['상태', <StatusBadge s={t.status} />],
+    ['기간', `${t.start_date || '-'} ~ ${t.end_date || '-'}`],
+    ['연결 KPI', k ? `${k.id} ${k.title}` : '일상 업무 (KPI 없음)'],
+    ['비고', t.note || '-'],
+  ];
+  return (
+    <Modal title="업무 내용" onClose={onClose} actions={<button className="btn" onClick={onClose}>닫기</button>}>
+      <div className="mt-meta">
+        {rows.map(([l, v]) => <Fragment key={l}><span className="muted">{l}</span><span style={{ whiteSpace: 'pre-wrap' }}>{v}</span></Fragment>)}
+      </div>
+    </Modal>
+  );
+}
+
+function TaskEditor({ draft, onClose }: { draft: TaskDraft; onClose: () => void }) {
   const { data, views, me, saveTask, ensureGroup, deleteTask, approvedKpis, kpisOf, setGroupKpi } = useApp();
   const t = draft.task;
   const [mainTitle, setMainTitle] = useState(t?.mainTitle ?? draft.mainTitle ?? '');
