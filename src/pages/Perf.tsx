@@ -16,7 +16,7 @@ export function periodRange(mode: 'month' | 'quarter', year: number, idx: number
 
 /** 성과 리포트 — 기존 renderPerf 와 같은 집계(마감일이 기간 안에 있는 업무) */
 export function Perf({ onEdit }: PageProps) {
-  const { views, data, approvedKpis } = useApp();
+  const { views, data, approvedKpis, canWrite } = useApp();
   const now = new Date();
   const [mode, setMode] = useState<'month' | 'quarter'>('month');
   const [year, setYear] = useState(now.getFullYear());
@@ -133,6 +133,8 @@ export function Perf({ onEdit }: PageProps) {
         </div>
       </div>
 
+      {/* 조회 권한(대표)에게는 KPI별 연결 현황을 보이지 않는다 */}
+      {canWrite && <>
       <div className="section-title" style={{ marginBottom: 10 }}>KPI별 연결 현황</div>
       {cats.map(c => {
         const items = byCat.get(c)!;
@@ -156,6 +158,7 @@ export function Perf({ onEdit }: PageProps) {
         );
       })}
       {!cats.length && <div className="empty">KPI 데이터가 없습니다</div>}
+      </>}
     </>
   );
 }
