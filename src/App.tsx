@@ -126,6 +126,9 @@ function Shell({ me }: { me: Profile }) {
           <a className="ext-link" href="https://dwcts-inventory-risk.netlify.app/" target="_blank" rel="noopener noreferrer" title="재고리스크 위원회 (새 창)">
             <span className="hide-sm">재고리스크 위원회</span><span className="mobile-only-inline">재고리스크</span> ↗
           </a>
+          <a className="ext-link" href="https://kpiweb-v3.vercel.app/" target="_blank" rel="noopener noreferrer" title="KPI WEB (새 창)">
+            <span className="hide-sm">KPI WEB</span><span className="mobile-only-inline">KPI</span> ↗
+          </a>
           {current.week && (
             <div className="week-nav">
               <button onClick={() => setMonday(addDays(monday, -7))} aria-label="이전 주">{Icon.left}</button>

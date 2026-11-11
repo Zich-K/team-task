@@ -526,6 +526,13 @@ table.tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
   .search { flex: 1 1 100%; order: 10; }
   .two-col { grid-template-columns: minmax(0, 1fr); }
 }
+/* 휴대폰: 바로가기 링크가 3개여도 위쪽 한 줄에 버튼까지 들어가게 */
+@media (max-width: 420px) {
+  .header-top { padding: 8px 12px; gap: 4px; }
+  .ext-link { padding: 3px 6px; font-size: 11.5px; }
+  .header-top .install-btn { padding: 7px 8px; }
+  .header-top .btn-primary { padding: 7px 10px; }
+}
 @media (max-width: 900px) { .metrics-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .seg::-webkit-scrollbar { display: none; }
